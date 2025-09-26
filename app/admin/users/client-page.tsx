@@ -32,6 +32,7 @@ interface User {
   joinDate: Date
   totalOrders: number
   totalSpent: number
+  password: string
 }
 
 export default function AdminUsersPageClient() {
@@ -58,45 +59,12 @@ export default function AdminUsersPageClient() {
       const loadUsers = () => {
         try {
           const storedUsers = localStorage.getItem("allUsers")
-          if (storedUsers) {
-            const parsedUsers = JSON.parse(storedUsers)
-            const formattedUsers = parsedUsers.map((u: any) => ({
-              ...u,
-              joinDate: new Date(u.createdAt || u.joinDate || "2024-01-01"),
-              totalOrders: u.totalOrders || 0,
-              totalSpent: u.totalSpent || 0,
-              status: u.status || "active",
-            }))
-            setUserList(formattedUsers)
-          } else {
-            // Fallback to default users
-            setUserList([
-              {
-                id: "1",
-                name: "Admin User",
-                email: "admin@eazybuy.com",
-                role: "admin",
-                joinDate: new Date("2024-01-01"),
-                totalOrders: 0,
-                totalSpent: 0,
-                status: "active",
-              },
-              {
-                id: "2",
-                name: "John Doe",
-                email: "user@example.com",
-                role: "user",
-                joinDate: new Date("2024-01-15"),
-                totalOrders: 3,
-                totalSpent: 354.74,
-                status: "active",
-              },
-            ])
-          }
-        } catch (error) {
-          console.error("[v0] Error loading users:", error)
-          // Fallback to default users on error
-          setUserList([
+          console.log("[v0] Loading users from localStorage:", storedUsers)
+
+          let allUsers: User[] = []
+
+          // Default users that should always be available
+          const defaultUsers: User[] = [
             {
               id: "1",
               name: "Admin User",
@@ -106,6 +74,7 @@ export default function AdminUsersPageClient() {
               totalOrders: 0,
               totalSpent: 0,
               status: "active",
+              password: "password123",
             },
             {
               id: "2",
@@ -116,8 +85,143 @@ export default function AdminUsersPageClient() {
               totalOrders: 3,
               totalSpent: 354.74,
               status: "active",
+              password: "password123",
             },
-          ])
+            {
+              id: "3",
+              name: "Jane Smith",
+              email: "jane@example.com",
+              role: "user",
+              joinDate: new Date("2024-02-01"),
+              totalOrders: 5,
+              totalSpent: 789.5,
+              status: "active",
+              password: "password123",
+            },
+            {
+              id: "4",
+              name: "Mike Johnson",
+              email: "mike@example.com",
+              role: "user",
+              joinDate: new Date("2024-02-15"),
+              totalOrders: 2,
+              totalSpent: 199.99,
+              status: "active",
+              password: "password123",
+            },
+            {
+              id: "5",
+              name: "Sarah Wilson",
+              email: "sarah@example.com",
+              role: "user",
+              joinDate: new Date("2024-03-01"),
+              totalOrders: 7,
+              totalSpent: 1250.3,
+              status: "active",
+              password: "password123",
+            },
+            {
+              id: "6",
+              name: "David Brown",
+              email: "david@example.com",
+              role: "user",
+              joinDate: new Date("2024-03-15"),
+              totalOrders: 1,
+              totalSpent: 89.99,
+              status: "inactive",
+              password: "password123",
+            },
+          ]
+
+          if (storedUsers) {
+            try {
+              const parsedUsers = JSON.parse(storedUsers)
+              console.log("[v0] Parsed users count:", parsedUsers.length)
+              console.log("[v0] Parsed users:", parsedUsers)
+
+              // Merge stored users with default users, avoiding duplicates
+              allUsers = [...defaultUsers]
+
+              if (Array.isArray(parsedUsers)) {
+                parsedUsers.forEach((storedUser: any) => {
+                  if (storedUser.email && storedUser.name && storedUser.role) {
+                    const existingIndex = allUsers.findIndex((u) => u.email === storedUser.email)
+
+                    const formattedUser: User = {
+                      id: storedUser.id || `user-${Date.now()}-${Math.random()}`,
+                      name: storedUser.name,
+                      email: storedUser.email,
+                      role: storedUser.role || "user",
+                      joinDate: new Date(storedUser.createdAt || storedUser.joinDate || "2024-01-01"),
+                      totalOrders: storedUser.totalOrders || 0,
+                      totalSpent: storedUser.totalSpent || 0,
+                      status: storedUser.status || "active",
+                      password: storedUser.password || "password123",
+                    }
+
+                    if (existingIndex >= 0) {
+                      // Update existing user
+                      allUsers[existingIndex] = formattedUser
+                    } else {
+                      // Add new user
+                      allUsers.push(formattedUser)
+                    }
+                  }
+                })
+              }
+            } catch (parseError) {
+              console.error("[v0] Error parsing stored users:", parseError)
+              allUsers = defaultUsers
+            }
+          } else {
+            allUsers = defaultUsers
+          }
+
+          // Save the merged users back to localStorage
+          const usersForStorage = allUsers.map((u) => ({
+            ...u,
+            createdAt: u.joinDate.toISOString(),
+          }))
+          localStorage.setItem("allUsers", JSON.stringify(usersForStorage))
+
+          console.log("[v0] Final user list count:", allUsers.length)
+          console.log(
+            "[v0] Final user list:",
+            allUsers.map((u) => ({ name: u.name, email: u.email, role: u.role })),
+          )
+          setUserList(allUsers)
+        } catch (error) {
+          console.error("[v0] Error loading users:", error)
+          // Fallback to default users
+          const fallbackUsers: User[] = [
+            {
+              id: "1",
+              name: "Admin User",
+              email: "admin@eazybuy.com",
+              role: "admin",
+              joinDate: new Date("2024-01-01"),
+              totalOrders: 0,
+              totalSpent: 0,
+              status: "active",
+              password: "password123",
+            },
+            {
+              id: "2",
+              name: "John Doe",
+              email: "user@example.com",
+              role: "user",
+              joinDate: new Date("2024-01-15"),
+              totalOrders: 3,
+              totalSpent: 354.74,
+              status: "active",
+              password: "password123",
+            },
+          ]
+          setUserList(fallbackUsers)
+          localStorage.setItem(
+            "allUsers",
+            JSON.stringify(fallbackUsers.map((u) => ({ ...u, createdAt: u.joinDate.toISOString() }))),
+          )
         }
       }
       loadUsers()
@@ -157,22 +261,55 @@ export default function AdminUsersPageClient() {
       joinDate: new Date(),
       totalOrders: 0,
       totalSpent: 0,
+      password: "password123",
     }
-    setUserList([...userList, newUser])
+    const updatedUsers = [...userList, newUser]
+    setUserList(updatedUsers)
+
+    const usersForStorage = updatedUsers.map((u) => ({
+      ...u,
+      createdAt: u.joinDate.toISOString(),
+    }))
+    localStorage.setItem("allUsers", JSON.stringify(usersForStorage))
+    console.log("[v0] Added user and saved to localStorage:", newUser)
   }
 
   const handleEditUser = (userId: string, userData: Partial<User>) => {
-    setUserList(userList.map((u) => (u.id === userId ? { ...u, ...userData } : u)))
+    const updatedUsers = userList.map((u) => (u.id === userId ? { ...u, ...userData } : u))
+    setUserList(updatedUsers)
+
+    const usersForStorage = updatedUsers.map((u) => ({
+      ...u,
+      createdAt: u.joinDate.toISOString(),
+    }))
+    localStorage.setItem("allUsers", JSON.stringify(usersForStorage))
+    console.log("[v0] Edited user and saved to localStorage:", userId)
   }
 
   const handleToggleUserStatus = (userId: string) => {
-    setUserList(
-      userList.map((u) => (u.id === userId ? { ...u, status: u.status === "active" ? "inactive" : "active" } : u)),
+    const updatedUsers = userList.map((u) =>
+      u.id === userId ? { ...u, status: u.status === "active" ? "inactive" : "active" } : u,
     )
+    setUserList(updatedUsers)
+
+    const usersForStorage = updatedUsers.map((u) => ({
+      ...u,
+      createdAt: u.joinDate.toISOString(),
+    }))
+    localStorage.setItem("allUsers", JSON.stringify(usersForStorage))
+    console.log("[v0] Toggled user status and saved to localStorage:", userId)
   }
 
   const handleDeleteUser = (userId: string) => {
-    setUserList(userList.filter((u) => u.id !== userId))
+    const updatedUsers = userList.filter((u) => u.id !== userId)
+    setUserList(updatedUsers)
+
+    const usersForStorage = updatedUsers.map((u) => ({
+      ...u,
+      createdAt: u.joinDate.toISOString(),
+    }))
+    localStorage.setItem("allUsers", JSON.stringify(usersForStorage))
+    console.log("[v0] Deleted user and saved to localStorage:", userId)
   }
 
   return (
@@ -207,70 +344,97 @@ export default function AdminUsersPageClient() {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Users ({filteredUsers.length})</CardTitle>
+            <CardTitle>
+              Users ({filteredUsers.length})
+              {userList.length !== filteredUsers.length && (
+                <span className="text-sm text-muted-foreground ml-2">({userList.length} total)</span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredUsers.map((u) => (
-                <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium">{u.name.charAt(0).toUpperCase()}</span>
+            {filteredUsers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {userList.length === 0
+                    ? "No users found. Try refreshing the page."
+                    : "No users match your current filters."}
+                </p>
+                {userList.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery("")
+                      setRoleFilter("all")
+                    }}
+                    className="mt-2"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredUsers.map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-medium">{u.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{u.name}</p>
+                        <p className="text-sm text-muted-foreground">{u.email}</p>
+                        <p className="text-xs text-muted-foreground">Joined {u.joinDate.toLocaleDateString()}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{u.name}</p>
-                      <p className="text-sm text-muted-foreground">{u.email}</p>
-                      <p className="text-xs text-muted-foreground">Joined {u.joinDate.toLocaleDateString()}</p>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{u.totalOrders} orders</p>
+                        <p className="text-sm text-muted-foreground">${u.totalSpent.toFixed(2)} spent</p>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge>
+                        <Badge variant={u.status === "active" ? "default" : "secondary"}>{u.status}</Badge>
+                      </div>
+                      <div className="flex space-x-2">
+                        <UserFormModal
+                          user={u}
+                          onSave={(data) => handleEditUser(u.id, data)}
+                          trigger={
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive">
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete {u.name}? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{u.totalOrders} orders</p>
-                      <p className="text-sm text-muted-foreground">${u.totalSpent.toFixed(2)} spent</p>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge>
-                      <Badge variant={u.status === "active" ? "default" : "secondary"}>{u.status}</Badge>
-                    </div>
-                    <div className="flex space-x-2">
-                      <UserFormModal
-                        user={u}
-                        onSave={(data) => handleEditUser(u.id, data)}
-                        trigger={
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        }
-                      />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete {u.name}? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,16 +1,34 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import { Header } from "@/components/layout/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ProductCard } from "@/components/products/product-card"
-import { getFeaturedProducts } from "@/lib/products"
+import { SearchAutocomplete } from "@/components/products/search-autocomplete"
+import { getFeaturedProducts, searchProducts } from "@/lib/products"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { FaShoppingBag, FaShieldAlt, FaTruck, FaStar, FaArrowRight } from "react-icons/fa"
 
 export default function HomePage() {
   const featuredProducts = getFeaturedProducts()
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return featuredProducts
+    }
+    // Search within featured products only
+    const searchResults = searchProducts(searchQuery)
+    return searchResults.filter((product) => featuredProducts.some((fp) => fp.id === product.id))
+  }, [searchQuery, featuredProducts])
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,10 +40,23 @@ export default function HomePage() {
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
             Welcome to <span className="text-primary">EazyBuy</span>
           </h1>
+
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Your trusted online shopping destination. Discover amazing products with unbeatable prices and exceptional
             service.
           </p>
+
+          <div className="mb-8 max-w-md mx-auto">
+            <div className="bg-background/90 backdrop-blur-sm rounded-lg p-4 border border-border/50 shadow-lg">
+              <SearchAutocomplete
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={handleSearch}
+                placeholder="Search for products..."
+              />
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild className="bg-primary text-white hover:bg-primary/90">
               <Link href="/products" className="text-white no-underline">
@@ -45,13 +76,38 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Featured Products</h2>
-            <p className="text-muted-foreground text-lg">Check out our most popular items</p>
+            <p className="text-muted-foreground text-lg mb-8">Check out our most popular items</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+
+          {searchQuery.trim() && filteredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg mb-4">No featured products found for "{searchQuery}"</p>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/products?search=${encodeURIComponent(searchQuery)}`)}
+              >
+                Search all products instead
+              </Button>
+            </div>
+          ) : (
+            <>
+              {searchQuery.trim() && (
+                <div className="text-center mb-6">
+                  <p className="text-muted-foreground">
+                    Found {filteredProducts.length} featured product{filteredProducts.length !== 1 ? "s" : ""}
+                    {searchQuery && ` for "${searchQuery}"`}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </>
+          )}
+
           <div className="text-center">
             <Button size="lg" variant="outline" asChild>
               <Link href="/products">

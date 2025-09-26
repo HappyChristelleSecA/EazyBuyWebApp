@@ -16,6 +16,10 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, viewMode = "grid", highlightTerm }: ProductCardProps) {
+  console.log("[v0] ProductCard rendering:", product.name, "Image URL:", product.image)
+  console.log("[v0] Image starts with data:", product.image?.startsWith("data:"))
+  console.log("[v0] Image length:", product.image?.length)
+
   const discountPercentage = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0

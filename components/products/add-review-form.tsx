@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,25 +11,51 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { FaStar } from "react-icons/fa"
 import { useAuth } from "@/hooks/use-auth"
-import { addReview } from "@/lib/reviews"
+import { addReview, hasUserReviewedProduct } from "@/lib/reviews"
 import { useToast } from "@/hooks/use-toast"
 
 interface AddReviewFormProps {
   productId: string
   onReviewAdded?: () => void
+  refreshKey?: number
 }
 
-export function AddReviewForm({ productId, onReviewAdded }: AddReviewFormProps) {
+export function AddReviewForm({ productId, onReviewAdded, refreshKey }: AddReviewFormProps) {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [title, setTitle] = useState("")
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [hasReviewed, setHasReviewed] = useState(false)
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const alreadyReviewed = hasUserReviewedProduct(productId, user.id)
+      setHasReviewed(alreadyReviewed)
+      console.log("[v0] Checking if user has reviewed product", {
+        productId,
+        userId: user.id,
+        hasReviewed: alreadyReviewed,
+      })
+    }
+  }, [productId, user, isAuthenticated, refreshKey])
+
+  const handleSignIn = () => {
+    router.push("/auth")
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    console.log("[v0] Review submission started", { productId, user: user?.email, rating, title, comment })
+
+    if (isSubmitting) {
+      console.log("[v0] Submission already in progress, ignoring")
+      return
+    }
 
     if (!isAuthenticated || !user) {
       toast({
@@ -36,6 +63,19 @@ export function AddReviewForm({ productId, onReviewAdded }: AddReviewFormProps) 
         description: "You need to be signed in to write a review.",
         variant: "destructive",
       })
+      return
+    }
+
+    const currentlyHasReview = hasUserReviewedProduct(productId, user.id)
+    if (currentlyHasReview) {
+      console.log("[v0] Duplicate review attempt blocked")
+      console.log("[v0] Showing duplicate review toast")
+      toast({
+        title: "Review already submitted",
+        description: "You have already posted a review for this item.",
+        variant: "destructive",
+      })
+      console.log("[v0] Toast called for duplicate review")
       return
     }
 
@@ -51,7 +91,7 @@ export function AddReviewForm({ productId, onReviewAdded }: AddReviewFormProps) 
     setIsSubmitting(true)
 
     try {
-      addReview({
+      const newReview = addReview({
         productId,
         userId: user.id,
         userName: user.name,
@@ -62,38 +102,30 @@ export function AddReviewForm({ productId, onReviewAdded }: AddReviewFormProps) 
         verified: true, // Assume verified if user is authenticated
       })
 
+      console.log("[v0] Review added successfully", newReview)
+
       toast({
         title: "Review submitted!",
         description: "Thank you for your review. It has been published successfully.",
       })
 
-      // Reset form
       setRating(0)
       setTitle("")
       setComment("")
 
-      // Notify parent component
+      setHasReviewed(true)
+
       onReviewAdded?.()
     } catch (error) {
+      console.log("[v0] Review submission error", error)
       toast({
         title: "Error",
-        description: "Failed to submit review. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit review. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground mb-4">Please sign in to write a review</p>
-          <Button variant="outline">Sign In</Button>
-        </CardContent>
-      </Card>
-    )
   }
 
   return (
@@ -151,8 +183,8 @@ export function AddReviewForm({ productId, onReviewAdded }: AddReviewFormProps) 
             />
           </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Submitting..." : "Submit Review"}
+          <Button type="submit" disabled={isSubmitting || hasReviewed} className="w-full">
+            {isSubmitting ? "Submitting..." : hasReviewed ? "Already Reviewed" : "Submit Review"}
           </Button>
         </form>
       </CardContent>

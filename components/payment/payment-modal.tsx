@@ -7,26 +7,39 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { FaCreditCard, FaLock, FaCheckCircle, FaTag } from "react-icons/fa"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { FaCreditCard, FaLock, FaCheckCircle, FaTag, FaExclamationTriangle } from "react-icons/fa"
 import { useCart } from "@/hooks/use-cart"
 import { useAuth } from "@/hooks/use-auth"
 import { createOrder } from "@/lib/orders"
+import { getShippingMethodById } from "@/lib/shipping"
 import type { DiscountApplication } from "@/lib/discounts"
+import { Badge } from "@/components/ui/badge"
 
 interface PaymentModalProps {
   isOpen: boolean
   onClose: () => void
   orderTotal: number
   appliedDiscounts?: DiscountApplication[]
+  selectedShippingMethodId?: string
 }
 
-export function PaymentModal({ isOpen, onClose, orderTotal, appliedDiscounts = [] }: PaymentModalProps) {
-  const { items, clearCart } = useCart()
+export function PaymentModal({
+  isOpen,
+  onClose,
+  orderTotal,
+  appliedDiscounts = [],
+  selectedShippingMethodId = "standard",
+}: PaymentModalProps) {
+  const { items, clearCart, validateStock } = useCart()
   const { user } = useAuth()
   const [step, setStep] = useState<"payment" | "success">("payment")
   const [isProcessing, setIsProcessing] = useState(false)
   const [receiptNumber, setReceiptNumber] = useState("")
   const [purchasedItems, setPurchasedItems] = useState<typeof items>([])
+  const [stockValidationError, setStockValidationError] = useState<{ removedItems: any[]; updatedItems: any[] } | null>(
+    null,
+  )
 
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
@@ -110,6 +123,12 @@ export function PaymentModal({ isOpen, onClose, orderTotal, appliedDiscounts = [
       return
     }
 
+    const stockResult = validateStock()
+    if (stockResult.removedItems.length > 0 || stockResult.updatedItems.length > 0) {
+      setStockValidationError(stockResult)
+      return
+    }
+
     setIsProcessing(true)
 
     console.log("[v0] Items before storing:", items)
@@ -129,6 +148,8 @@ export function PaymentModal({ isOpen, onClose, orderTotal, appliedDiscounts = [
         price: item.product.price,
       }))
 
+      const shippingMethod = getShippingMethodById(selectedShippingMethodId)
+
       const newOrder = createOrder({
         userId: user.id,
         items: orderItems,
@@ -144,6 +165,14 @@ export function PaymentModal({ isOpen, onClose, orderTotal, appliedDiscounts = [
           country: "USA",
         },
         appliedDiscounts: appliedDiscounts.map((d) => ({ code: d.discountCode, amount: d.discountAmount })),
+        shippingMethod: shippingMethod
+          ? {
+              id: shippingMethod.id,
+              name: shippingMethod.name,
+              cost: shippingMethod.price,
+              estimatedDays: shippingMethod.estimatedDays,
+            }
+          : undefined,
       })
 
       console.log("[v0] Order created:", newOrder.id)
@@ -333,6 +362,7 @@ Thank you for shopping with EazyBuy!
   const handleClose = () => {
     setStep("payment")
     setPurchasedItems([])
+    setStockValidationError(null)
     setPaymentData({
       cardNumber: "",
       expiryDate: "",
@@ -352,10 +382,16 @@ Thank you for shopping with EazyBuy!
   console.log("[v0] Purchased items length:", purchasedItems.length)
 
   const displaySubtotal = displayItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  const shippingMethod = getShippingMethodById(selectedShippingMethodId)
+  const shippingCost = shippingMethod
+    ? selectedShippingMethodId === "standard" && displaySubtotal >= 50
+      ? 0
+      : shippingMethod.price
+    : 0
   const displayTax = calculateTax(displaySubtotal - totalDiscountAmount)
-  const displayTotal = total
+  const displayTotal = displaySubtotal - totalDiscountAmount + displayTax + shippingCost
 
-  console.log("[v0] Display calculations:", { displaySubtotal, displayTax, displayTotal })
+  console.log("[v0] Display calculations:", { displaySubtotal, displayTax, displayTotal, shippingCost })
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -370,6 +406,43 @@ Thank you for shopping with EazyBuy!
             </DialogHeader>
 
             <div className="space-y-4">
+              {stockValidationError && (
+                <Alert className="border-red-200 bg-red-50">
+                  <FaExclamationTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p className="font-medium text-red-800">Cannot Process Payment - Stock Issues</p>
+                      {stockValidationError.removedItems.length > 0 && (
+                        <div>
+                          <p className="text-sm text-red-700">These items are no longer available:</p>
+                          <ul className="text-sm text-red-700 ml-4 list-disc">
+                            {stockValidationError.removedItems.map((item) => (
+                              <li key={item.id}>{item.product.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {stockValidationError.updatedItems.length > 0 && (
+                        <div>
+                          <p className="text-sm text-red-700">These items have limited stock:</p>
+                          <ul className="text-sm text-red-700 ml-4 list-disc">
+                            {stockValidationError.updatedItems.map((item) => (
+                              <li key={item.id}>
+                                {item.product.name} (only {item.quantity} available)
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <p className="text-sm text-red-700">Please return to your cart to review the changes.</p>
+                      <Button variant="outline" size="sm" onClick={handleClose} className="mt-2 bg-transparent">
+                        Return to Cart
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {isCartEmpty ? (
                 <Card>
                   <CardContent className="p-6 text-center">
@@ -390,6 +463,40 @@ Thank you for shopping with EazyBuy!
                           <span className="font-medium">Subtotal</span>
                           <span>${subtotal.toFixed(2)}</span>
                         </div>
+
+                        {(() => {
+                          const shippingMethod = getShippingMethodById(selectedShippingMethodId)
+                          const shippingCost = shippingMethod
+                            ? selectedShippingMethodId === "standard" && subtotal >= 50
+                              ? 0
+                              : shippingMethod.price
+                            : 0
+
+                          return (
+                            <div className="flex justify-between items-center">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Shipping</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {shippingMethod?.name} ({shippingMethod?.estimatedDays})
+                                </span>
+                              </div>
+                              <span>
+                                {shippingCost === 0 && shippingMethod?.price > 0 ? (
+                                  <div className="text-right">
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                      FREE
+                                    </Badge>
+                                    <div className="text-xs text-muted-foreground line-through">
+                                      ${shippingMethod.price.toFixed(2)}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  `$${shippingCost.toFixed(2)}`
+                                )}
+                              </span>
+                            </div>
+                          )
+                        })()}
 
                         {/* Display applied discounts in payment modal */}
                         {appliedDiscounts.map((discount) => (
@@ -415,7 +522,6 @@ Thank you for shopping with EazyBuy!
                     </CardContent>
                   </Card>
 
-                  {/* ... existing payment form code ... */}
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="cardNumber">Card Number</Label>
@@ -507,7 +613,13 @@ Thank you for shopping with EazyBuy!
                     </Button>
                     <Button
                       onClick={processPayment}
-                      disabled={isProcessing || !paymentData.cardNumber || !paymentData.cardholderName || isCartEmpty}
+                      disabled={
+                        isProcessing ||
+                        !paymentData.cardNumber ||
+                        !paymentData.cardholderName ||
+                        isCartEmpty ||
+                        stockValidationError !== null
+                      }
                       className="flex-1"
                     >
                       {isProcessing ? "Processing..." : "Pay Now"}
@@ -558,6 +670,29 @@ Thank you for shopping with EazyBuy!
                         <span>-${discount.discountAmount.toFixed(2)}</span>
                       </div>
                     ))}
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span>Shipping:</span>
+                        <span className="text-xs text-muted-foreground">
+                          {shippingMethod?.name} ({shippingMethod?.estimatedDays})
+                        </span>
+                      </div>
+                      <span>
+                        {shippingCost === 0 && shippingMethod?.price > 0 ? (
+                          <div className="text-right">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                              FREE
+                            </Badge>
+                            <div className="text-xs text-muted-foreground line-through">
+                              ${shippingMethod.price.toFixed(2)}
+                            </div>
+                          </div>
+                        ) : (
+                          `$${shippingCost.toFixed(2)}`
+                        )}
+                      </span>
+                    </div>
 
                     <div className="flex justify-between items-center">
                       <span>Tax (13%):</span>

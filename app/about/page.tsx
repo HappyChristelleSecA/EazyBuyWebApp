@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { BackButton } from "@/components/ui/back-button"
 import { Target, Users, Award, Truck, Shield, Heart, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
@@ -43,6 +44,12 @@ export default function AboutPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <BackButton fallbackUrl="/" className="mb-4">
+            Back to Home
+          </BackButton>
+        </div>
+
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">

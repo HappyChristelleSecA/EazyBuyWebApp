@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { Header } from "@/components/layout/header"
+import { BackButton } from "@/components/ui/back-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -123,6 +124,10 @@ export default function ContactPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <BackButton fallbackUrl="/" className="mb-4">
+          ← Back to Home
+        </BackButton>
+
         {/* Header Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>

@@ -10,7 +10,15 @@ import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ProductFormModal } from "@/components/admin/product-form-modal"
-import { products, type Product } from "@/lib/products"
+import type { Product } from "@/lib/products"
+import {
+  getStoredProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  toggleProductVisibility, // Add toggle function import
+  initializeProductStorage,
+} from "@/lib/product-management"
 import { FaSearch, FaEdit, FaTrash, FaEye, FaPlus, FaFilter, FaDownload } from "react-icons/fa"
 import Image from "next/image"
 import Link from "next/link"
@@ -34,7 +42,8 @@ export default function AdminProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [stockFilter, setStockFilter] = useState("all")
-  const [productList, setProductList] = useState(products)
+  const [productList, setProductList] = useState<Product[]>([])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !user || user.role !== "admin")) {
@@ -42,6 +51,22 @@ export default function AdminProductsPage() {
       router.push("/")
     }
   }, [isAuthenticated, user, isLoading, router])
+
+  useEffect(() => {
+    initializeProductStorage()
+    const storedProducts = getStoredProducts()
+    const sortedProducts = storedProducts.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return dateB - dateA // Newest first
+    })
+    setProductList(sortedProducts)
+    console.log("[v0] Loaded products from storage:", sortedProducts.length)
+    console.log(
+      "[v0] Product names:",
+      sortedProducts.map((p) => p.name),
+    )
+  }, [refreshTrigger])
 
   if (isLoading) {
     return <LoadingSpinner className="min-h-screen" />
@@ -63,38 +88,71 @@ export default function AdminProductsPage() {
       (stockFilter === "inStock" && product.inStock) ||
       (stockFilter === "outOfStock" && !product.inStock)
 
-    return matchesSearch && matchesCategory && matchesStock
+    const matches = matchesSearch && matchesCategory && matchesStock
+    if (!matches && product.name.toLowerCase().includes("my app")) {
+      console.log("[v0] Product filtered out:", {
+        name: product.name,
+        matchesSearch,
+        matchesCategory,
+        matchesStock,
+        searchQuery,
+        categoryFilter,
+        stockFilter,
+        category: product.category,
+        inStock: product.inStock,
+      })
+    }
+    return matches
   })
 
-  const categories = [...new Set(productList.map((p) => p.category))]
+  console.log("[v0] Total products:", productList.length)
+  console.log("[v0] Filtered products:", filteredProducts.length)
+  console.log(
+    "[v0] Filtered product names:",
+    filteredProducts.map((p) => p.name),
+  )
+
+  const categories = [...new Set(productList.map((p) => p.category))].filter(
+    (category) => category && category.trim() !== "",
+  )
 
   const handleAddProduct = (productData: Partial<Product>) => {
-    const newProduct: Product = {
-      id: `product-${Date.now()}`,
-      name: productData.name || "",
-      description: productData.description || "",
-      price: productData.price || 0,
-      originalPrice: productData.originalPrice,
-      category: productData.category || "",
-      image: productData.image || "/placeholder.svg?height=400&width=400",
-      images: productData.images || [],
-      inStock: productData.inStock ?? true,
-      featured: productData.featured ?? false,
-      rating: 4.5,
-      reviewCount: 0,
-      tags: productData.tags || [],
-      quantity: productData.quantity || 0,
-      lowStockThreshold: productData.lowStockThreshold || 5,
-    }
-    setProductList([...productList, newProduct])
+    console.log("[v0] Starting product addition process")
+    console.log("[v0] Product data to add:", productData)
+
+    const newProduct = addProduct(productData)
+    console.log("[v0] Product added:", newProduct.name, "ID:", newProduct.id)
+
+    setProductList((prevProducts) => {
+      const updatedProducts = [newProduct, ...prevProducts]
+      console.log("[v0] UI state updated with new product count:", updatedProducts.length)
+      return updatedProducts
+    })
+
+    // Also trigger refresh for consistency
+    setRefreshTrigger((prev) => prev + 1)
+
+    setSearchQuery("")
+    setCategoryFilter("all")
+    setStockFilter("all")
+
+    console.log("[v0] Product addition process completed - UI updated")
   }
 
   const handleEditProduct = (productId: string, productData: Partial<Product>) => {
-    setProductList(productList.map((p) => (p.id === productId ? { ...p, ...productData } : p)))
+    const success = updateProduct(productId, productData)
+    if (success) {
+      setRefreshTrigger((prev) => prev + 1)
+      console.log("[v0] Product updated and list will refresh")
+    }
   }
 
   const handleDeleteProduct = (productId: string) => {
-    setProductList(productList.filter((p) => p.id !== productId))
+    const success = deleteProduct(productId)
+    if (success) {
+      setRefreshTrigger((prev) => prev + 1)
+      console.log("[v0] Product deleted and list will refresh")
+    }
   }
 
   const handleExportProducts = () => {
@@ -105,6 +163,26 @@ export default function AdminProductsPage() {
     linkElement.setAttribute("href", dataUri)
     linkElement.setAttribute("download", exportFileDefaultName)
     linkElement.click()
+  }
+
+  const handleToggleVisibility = (productId: string) => {
+    const success = toggleProductVisibility(productId)
+    if (success) {
+      setRefreshTrigger((prev) => prev + 1)
+      console.log("[v0] Product visibility toggled and list will refresh")
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    const colorMap: Record<string, string> = {
+      Electronics: "bg-blue-100 text-blue-800 border-blue-200",
+      Fashion: "bg-pink-100 text-pink-800 border-pink-200",
+      "Home & Garden": "bg-green-100 text-green-800 border-green-200",
+      Sports: "bg-orange-100 text-orange-800 border-orange-200",
+      Books: "bg-purple-100 text-purple-800 border-purple-200",
+      "Food & Beverages": "bg-yellow-100 text-yellow-800 border-yellow-200",
+    }
+    return colorMap[category] || "bg-gray-100 text-gray-800 border-gray-200"
   }
 
   return (
@@ -180,14 +258,19 @@ export default function AdminProductsPage() {
           <Card className="border-2 border-primary/10">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Products ({filteredProducts.length})</CardTitle>
+                <CardTitle className="text-xl">Products ({productList.length})</CardTitle>
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                    {filteredProducts.filter((p) => p.inStock).length} In Stock
+                    {productList.filter((p) => p.inStock).length} In Stock
                   </Badge>
                   <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-                    {filteredProducts.filter((p) => !p.inStock).length} Out of Stock
+                    {productList.filter((p) => !p.inStock).length} Out of Stock
                   </Badge>
+                  {filteredProducts.length !== productList.length && (
+                    <Badge variant="outline" className="bg-info/10 text-info border-info/20">
+                      Showing {filteredProducts.length} of {productList.length}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -212,7 +295,7 @@ export default function AdminProductsPage() {
                           <h3 className="font-semibold text-lg text-foreground">{product.name}</h3>
                           <p className="text-sm text-muted-foreground line-clamp-2 max-w-md">{product.description}</p>
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                            <Badge variant="secondary" className={`${getCategoryColor(product.category)} font-medium`}>
                               {product.category}
                             </Badge>
                             <Badge
@@ -237,6 +320,23 @@ export default function AdminProductsPage() {
                                   Low Stock ({product.quantity})
                                 </Badge>
                               )}
+                            {product.createdAt && (
+                              <Badge variant="outline" className="bg-info/10 text-info border-info/20 text-xs">
+                                Added {new Date(product.createdAt).toLocaleDateString()}
+                              </Badge>
+                            )}
+                            <button
+                              onClick={() => handleToggleVisibility(product.id)}
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors hover:opacity-80 ${
+                                product.visible !== false
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                              }`}
+                              title={`Click to ${product.visible !== false ? "hide" : "show"} product from users`}
+                            >
+                              <FaEye className={`h-3 w-3 ${product.visible === false ? "opacity-50" : ""}`} />
+                              <span>{product.visible !== false ? "Visible" : "Hidden"}</span>
+                            </button>
                           </div>
                         </div>
                         <div className="text-right space-y-1">
@@ -256,23 +356,41 @@ export default function AdminProductsPage() {
                       </div>
                     </div>
                     <div className="flex space-x-1">
-                      <Button variant="ghost" size="icon" asChild className="hover:bg-info/10 hover:text-info">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        className="hover:bg-info/10 hover:text-info relative group"
+                        title="View Product Page"
+                      >
                         <Link href={`/products/${product.id}`}>
                           <FaEye className="h-4 w-4" />
                         </Link>
                       </Button>
+
                       <ProductFormModal
                         product={product}
                         onSave={(data) => handleEditProduct(product.id, data)}
                         trigger={
-                          <Button variant="ghost" size="icon" className="hover:bg-secondary/10 hover:text-secondary">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-secondary/10 hover:text-secondary"
+                            title="Edit Product"
+                          >
                             <FaEdit className="h-4 w-4" />
                           </Button>
                         }
                       />
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10"
+                            title="Delete Product"
+                          >
                             <FaTrash className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>

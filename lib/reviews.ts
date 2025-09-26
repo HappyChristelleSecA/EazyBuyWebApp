@@ -117,7 +117,15 @@ export const getReviewStats = (productId: string) => {
   }
 }
 
+export const hasUserReviewedProduct = (productId: string, userId: string): boolean => {
+  return reviews.some((review) => review.productId === productId && review.userId === userId)
+}
+
 export const addReview = (review: Omit<Review, "id" | "date" | "helpful">): Review => {
+  if (hasUserReviewedProduct(review.productId, review.userId)) {
+    throw new Error("You have already reviewed this product")
+  }
+
   const newReview: Review = {
     ...review,
     id: `review-${Date.now()}`,
@@ -126,4 +134,21 @@ export const addReview = (review: Omit<Review, "id" | "date" | "helpful">): Revi
   }
   reviews.push(newReview)
   return newReview
+}
+
+export const deleteReview = (reviewId: string, userId: string): boolean => {
+  const reviewIndex = reviews.findIndex((review) => review.id === reviewId)
+
+  if (reviewIndex === -1) {
+    throw new Error("Review not found")
+  }
+
+  const review = reviews[reviewIndex]
+  if (review.userId !== userId) {
+    throw new Error("You can only delete your own reviews")
+  }
+
+  reviews.splice(reviewIndex, 1)
+  console.log("[v0] Review deleted:", reviewId)
+  return true
 }

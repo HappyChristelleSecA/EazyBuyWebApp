@@ -17,46 +17,67 @@ export function AddToCartButton({ product, quantity = 1, size = "default", class
   const { addToCart, items } = useCart()
   const [isAdded, setIsAdded] = useState(false)
 
+  console.log("[v0] AddToCartButton rendered for product:", product.name)
+  console.log("[v0] Current cart items count:", items.length)
+
   const isInCart = items.some((item) => item.id === product.id)
 
   const handleAddToCart = () => {
-    if (!product.inStock) return
+    console.log("[v0] Add to Cart button clicked for:", product.name)
+    console.log("[v0] Product stock status:", { inStock: product.inStock, outOfOrder: product.outOfOrder })
+    console.log("[v0] Quantity to add:", quantity)
 
-    const cartItem = items.find((item) => item.id === product.id)
-    const currentCartQuantity = cartItem ? cartItem.quantity : 0
-    const availableQuantity = product.quantity || 0
-
-    if (availableQuantity > 0 && currentCartQuantity >= availableQuantity) {
-      return // Don't add if already at max quantity
+    if (!product.inStock || product.outOfOrder) {
+      console.log("[v0] ❌ Cannot add to cart - product not available")
+      return
     }
 
+    console.log("[v0] ✅ Adding product to cart...")
     addToCart(product, quantity)
+    console.log("[v0] ✅ addToCart function called")
+
     setIsAdded(true)
+    console.log("[v0] ✅ Set isAdded to true")
 
     // Reset the added state after 2 seconds
-    setTimeout(() => setIsAdded(false), 2000)
+    setTimeout(() => {
+      setIsAdded(false)
+      console.log("[v0] Reset isAdded to false")
+    }, 2000)
   }
 
-  if (!product.inStock) {
+  if (!product.inStock || product.outOfOrder) {
+    const statusText = product.outOfOrder ? "Out of Order" : "Out of Stock"
+    console.log("[v0] Showing disabled button:", statusText)
     return (
       <Button size={size} disabled className={className}>
-        Out of Stock
+        {statusText}
       </Button>
     )
   }
 
   const cartItem = items.find((item) => item.id === product.id)
   const currentCartQuantity = cartItem ? cartItem.quantity : 0
-  const availableQuantity = product.quantity || 999
-  const atMaxQuantity = currentCartQuantity >= availableQuantity
+  const availableQuantity = product.quantity || 0
+  const atMaxQuantity = availableQuantity > 0 && currentCartQuantity >= availableQuantity
+
+  console.log("[v0] Cart quantity check:", {
+    currentCartQuantity,
+    availableQuantity,
+    atMaxQuantity,
+    isInCart,
+  })
 
   if (atMaxQuantity) {
+    console.log("[v0] Showing max quantity reached button")
     return (
       <Button size={size} disabled className={className}>
         Max Quantity Reached
       </Button>
     )
   }
+
+  console.log("[v0] Showing active Add to Cart button, isAdded:", isAdded)
 
   return (
     <Button size={size} onClick={handleAddToCart} className={className} variant={isInCart ? "secondary" : "default"}>

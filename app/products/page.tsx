@@ -4,24 +4,57 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/layout/header"
 import { ProductCard } from "@/components/products/product-card"
 import { ProductFilters } from "@/components/products/product-filters"
-import { products, searchProductsEnhanced, filterProducts, sortProducts, type Product } from "@/lib/products"
+import { BackButton } from "@/components/ui/back-button"
+import { getAllProducts, searchProductsEnhanced, filterProducts, sortProducts, type Product } from "@/lib/products"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { FaThLarge, FaList } from "react-icons/fa"
 
 export default function ProductsPage() {
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products)
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [sortBy, setSortBy] = useState("name")
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [highlightTerm, setHighlightTerm] = useState("")
 
+  useEffect(() => {
+    const loadProducts = () => {
+      const products = getAllProducts()
+      // Filter to only show products that are visible to users
+      const visibleProducts = products.filter((product) => product.visible !== false)
+      setAllProducts(visibleProducts)
+      setFilteredProducts(visibleProducts)
+
+      console.log("[v0] Loaded products for shopping page:", visibleProducts.length)
+      console.log(
+        "[v0] Visible product names:",
+        visibleProducts.map((p) => p.name),
+      )
+    }
+
+    loadProducts()
+
+    // Listen for product updates
+    const handleStorageChange = () => {
+      loadProducts()
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("productUpdated", handleStorageChange)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("productUpdated", handleStorageChange)
+    }
+  }, [])
+
   const updateProducts = (query: string = searchQuery, filters: any = {}) => {
-    let result = products
+    let result = allProducts
 
     // Apply search with enhanced functionality
     if (query) {
-      const searchResult = searchProductsEnhanced(query)
+      const searchResult = searchProductsEnhanced(query, allProducts)
       result = searchResult.products
       setHighlightTerm(searchResult.highlightTerm)
     } else {
@@ -54,13 +87,17 @@ export default function ProductsPage() {
 
   useEffect(() => {
     updateProducts()
-  }, [sortBy])
+  }, [sortBy, allProducts])
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <BackButton fallbackUrl="/" className="mb-4">
+          ← Back to Home
+        </BackButton>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Products</h1>
           <p className="text-muted-foreground">Discover our amazing collection of products</p>
@@ -72,7 +109,7 @@ export default function ProductsPage() {
             <ProductFilters
               onFiltersChange={handleFiltersChange}
               onSearchChange={handleSearchChange}
-              totalProducts={products.length}
+              totalProducts={allProducts.length}
               filteredProducts={filteredProducts}
             />
           </div>
@@ -81,7 +118,7 @@ export default function ProductsPage() {
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
               <p className="text-muted-foreground">
-                Showing {filteredProducts.length} of {products.length} products
+                Showing {filteredProducts.length} of {allProducts.length} products
                 {searchQuery && <span className="ml-2 text-primary">for "{searchQuery}"</span>}
               </p>
               <div className="flex items-center space-x-4">

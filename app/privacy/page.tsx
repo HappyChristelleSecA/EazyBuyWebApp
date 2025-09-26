@@ -1,4 +1,5 @@
 import { Header } from "@/components/layout/header"
+import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function PrivacyPolicyPage() {
@@ -7,6 +8,10 @@ export default function PrivacyPolicyPage() {
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          <BackButton fallbackUrl="/" className="mb-6">
+            ← Back to Home
+          </BackButton>
+
           <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
 
           <div className="space-y-6">

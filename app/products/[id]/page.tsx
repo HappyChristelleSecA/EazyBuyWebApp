@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import { Header } from "@/components/layout/header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +15,7 @@ import { FaStar, FaShare } from "react-icons/fa"
 import { WishlistButton } from "@/components/products/wishlist-button"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { BackButton } from "@/components/ui/back-button"
 
 interface ProductPageProps {
   params: {
@@ -20,6 +24,8 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
+  const [reviewRefreshKey, setReviewRefreshKey] = useState(0)
+
   const product = getProductById(params.id)
 
   if (!product) {
@@ -33,11 +39,25 @@ export default function ProductPage({ params }: ProductPageProps) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0
 
+  const handleReviewAdded = () => {
+    setReviewRefreshKey(reviewRefreshKey + 1)
+  }
+
+  const handleReviewDeleted = () => {
+    setReviewRefreshKey(reviewRefreshKey + 1)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <BackButton fallbackUrl="/products" className="mb-4">
+            Back to Products
+          </BackButton>
+        </div>
+
         <div className="grid lg:grid-cols-2 gap-12 mb-12">
           {/* Product Images */}
           <div className="space-y-4">
@@ -145,11 +165,11 @@ export default function ProductPage({ params }: ProductPageProps) {
 
         <div className="grid lg:grid-cols-3 gap-8 mb-12">
           <div className="lg:col-span-2 space-y-8">
-            <ReviewList productId={product.id} />
-            <AddReviewForm productId={product.id} />
+            <ReviewList productId={product.id} refreshKey={reviewRefreshKey} onReviewDeleted={handleReviewDeleted} />
+            <AddReviewForm productId={product.id} onReviewAdded={handleReviewAdded} refreshKey={reviewRefreshKey} />
           </div>
           <div>
-            <ReviewSummary productId={product.id} />
+            <ReviewSummary productId={product.id} refreshKey={reviewRefreshKey} />
           </div>
         </div>
 

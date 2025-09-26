@@ -7,6 +7,8 @@ export interface User {
   role: UserRole
   createdAt: Date
   password?: string
+  emailVerified?: boolean
+  verificationToken?: string
 }
 
 export interface AuthState {
@@ -80,6 +82,7 @@ export const authenticateUser = async (email: string, password: string): Promise
   const user = allUsers.find((u) => u.email === email)
   console.log("[v0] Found user:", user)
 
+  // Demo users don't have emailVerified property, and new users start unverified
   if (user && user.password === password) {
     console.log("[v0] Authentication successful for:", user.email)
     // Return user without password for security
@@ -90,6 +93,8 @@ export const authenticateUser = async (email: string, password: string): Promise
   console.log("[v0] Authentication failed")
   return null
 }
+
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email-service"
 
 export const registerUser = async (email: string, password: string, name: string): Promise<User | null> => {
   // Simulate API call delay
@@ -102,6 +107,8 @@ export const registerUser = async (email: string, password: string, name: string
     throw new Error("User already exists")
   }
 
+  const verificationToken = Math.random().toString(36).substring(2, 15)
+
   // Create new user
   const newUser: User = {
     id: Date.now().toString(),
@@ -110,6 +117,8 @@ export const registerUser = async (email: string, password: string, name: string
     role: "user",
     createdAt: new Date(),
     password, // Keep password for authentication
+    emailVerified: false, // Start with unverified email
+    verificationToken, // Store verification token
   }
 
   const updatedUsers = [...allUsers, newUser]
@@ -117,7 +126,18 @@ export const registerUser = async (email: string, password: string, name: string
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("allUsers", JSON.stringify(updatedUsers))
-      console.log("[v0] Stored user with password for:", email)
+      console.log("[v0] User registered with verification token:", email)
+
+      try {
+        const emailResult = await sendVerificationEmail(email, name, verificationToken)
+        if (emailResult.success) {
+          console.log(`[v0] Verification email sent successfully to: ${email}`)
+        } else {
+          console.log(`[v0] Failed to send verification email: ${emailResult.error}`)
+        }
+      } catch (emailError) {
+        console.log(`[v0] Email sending error: ${emailError}`)
+      }
     } catch (error) {
       console.log("[v0] Failed to store users:", error)
     }
@@ -126,6 +146,102 @@ export const registerUser = async (email: string, password: string, name: string
   // Return user without password for security
   const { password: _, ...userWithoutPassword } = newUser
   return userWithoutPassword
+}
+
+export const verifyEmail = async (token: string): Promise<{ success: boolean; error?: string }> => {
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+
+  const allUsers = loadRegisteredUsers()
+  const userIndex = allUsers.findIndex((u) => u.verificationToken === token)
+
+  if (userIndex === -1) {
+    return { success: false, error: "Invalid or expired verification token" }
+  }
+
+  // Mark user as verified
+  allUsers[userIndex].emailVerified = true
+  allUsers[userIndex].verificationToken = undefined
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("allUsers", JSON.stringify(allUsers))
+      console.log("[v0] Email verified for user:", allUsers[userIndex].email)
+    } catch (error) {
+      console.log("[v0] Failed to update user verification:", error)
+    }
+  }
+
+  return { success: true }
+}
+
+export const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  const allUsers = loadRegisteredUsers()
+  const user = allUsers.find((u) => u.email === email)
+
+  if (!user) {
+    return { success: false, error: "No account found with this email address" }
+  }
+
+  const resetToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
+
+  try {
+    const emailResult = await sendPasswordResetEmail(email, user.name, resetToken)
+    if (emailResult.success) {
+      console.log(`[v0] Password reset email sent successfully to: ${email}`)
+
+      // In production, you would store the reset token with expiration in the database
+      // For demo, we'll just log it
+      console.log(`[v0] Reset token generated: ${resetToken}`)
+
+      return { success: true }
+    } else {
+      console.log(`[v0] Failed to send password reset email: ${emailResult.error}`)
+      return { success: false, error: emailResult.error || "Failed to send reset email" }
+    }
+  } catch (error) {
+    console.log(`[v0] Password reset email error: ${error}`)
+    return { success: false, error: "Failed to send reset email" }
+  }
+}
+
+export const resetPasswordWithToken = async (
+  token: string,
+  newPassword: string,
+): Promise<{ success: boolean; error?: string }> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  const allUsers = loadRegisteredUsers()
+
+  // In a real application, you would:
+  // 1. Verify the reset token is valid and not expired
+  // 2. Find the user associated with the token
+  // 3. Update the user's password in the database
+  // 4. Invalidate the reset token
+
+  // For demo purposes, we'll simulate successful password reset
+  // In production, you'd validate the token against stored reset tokens
+  console.log(`[v0] Password reset with token: ${token}`)
+  console.log(`[v0] New password would be set for user with token: ${token}`)
+
+  // Simulate token validation
+  if (token.length < 10) {
+    return { success: false, error: "Invalid or expired reset token" }
+  }
+
+  // In production, update the user's password here
+  // const userIndex = allUsers.findIndex(u => u.resetToken === token && u.resetTokenExpiry > Date.now())
+  // if (userIndex !== -1) {
+  //   allUsers[userIndex].password = newPassword
+  //   allUsers[userIndex].resetToken = undefined
+  //   allUsers[userIndex].resetTokenExpiry = undefined
+  //   localStorage.setItem("allUsers", JSON.stringify(allUsers))
+  // }
+
+  return { success: true }
 }
 
 let memoryCache: User | null = null

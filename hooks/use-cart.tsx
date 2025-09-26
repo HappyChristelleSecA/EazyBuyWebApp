@@ -12,6 +12,7 @@ import {
   removeFromCart as removeFromCartUtil,
   updateCartItemQuantity as updateCartItemQuantityUtil,
   clearCart as clearCartUtil,
+  validateCartStock,
 } from "@/lib/cart"
 import type { Product } from "@/lib/products"
 import { useAuth } from "@/hooks/use-auth"
@@ -22,6 +23,7 @@ interface CartContextType extends CartState {
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
   toggleCart: () => void
+  validateStock: () => { removedItems: any[]; updatedItems: any[] }
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -65,17 +67,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [user, isLoaded])
 
   const addToCart = (product: Product, quantity = 1) => {
-    if (!product.inStock) return
+    console.log("[v0] useCart addToCart called with:", { productName: product.name, quantity })
+    console.log("[v0] Current cart state before adding:", {
+      itemsCount: cartState.items.length,
+      total: cartState.total,
+    })
 
     setCartState((prev) => {
+      console.log(
+        "[v0] Previous cart items:",
+        prev.items.map((item) => ({ name: item.product.name, qty: item.quantity })),
+      )
+
       const newItems = addToCartUtil(prev.items, product, quantity)
-      return {
+      console.log(
+        "[v0] New cart items after addToCartUtil:",
+        newItems.map((item) => ({ name: item.product.name, qty: item.quantity })),
+      )
+
+      const newTotal = calculateCartTotal(newItems)
+      const newItemCount = calculateItemCount(newItems)
+
+      console.log("[v0] New cart totals:", { newTotal, newItemCount })
+
+      const newState = {
         ...prev,
         items: newItems,
-        total: calculateCartTotal(newItems),
-        itemCount: calculateItemCount(newItems),
-        isOpen: true,
+        total: newTotal,
+        itemCount: newItemCount,
+        isOpen: newItems.length > prev.items.length,
       }
+
+      console.log("[v0] ✅ Cart state updated successfully")
+      return newState
     })
   }
 
@@ -120,6 +144,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  const validateStock = () => {
+    const { validItems, removedItems, updatedItems } = validateCartStock(cartState.items)
+
+    if (removedItems.length > 0 || updatedItems.length > 0) {
+      setCartState((prev) => ({
+        ...prev,
+        items: validItems,
+        total: calculateCartTotal(validItems),
+        itemCount: calculateItemCount(validItems),
+      }))
+    }
+
+    return { removedItems, updatedItems }
+  }
+
   return (
     <CartContext.Provider
       value={{
@@ -129,6 +168,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         toggleCart,
+        validateStock,
       }}
     >
       {children}

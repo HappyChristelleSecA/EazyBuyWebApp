@@ -7,31 +7,47 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PaymentModal } from "@/components/payment/payment-modal"
 import { DiscountBanner } from "@/components/discounts/discount-banner"
 import { PromoCodeInput } from "@/components/discounts/promo-code-input"
-import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaArrowLeft } from "react-icons/fa"
+import { BackButton } from "@/components/ui/back-button"
+import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaArrowLeft, FaExclamationTriangle } from "react-icons/fa"
 import Image from "next/image"
-import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { calculateCartWithDiscounts, incrementDiscountUsage } from "@/lib/discounts"
+import { ShippingMethodSelector } from "@/components/cart/shipping-method-selector"
+import { getDefaultShippingMethod, calculateShippingCost } from "@/lib/shipping"
 
 export default function CartPage() {
-  const { items, itemCount, updateQuantity, removeFromCart, clearCart } = useCart()
+  const { items, itemCount, updateQuantity, removeFromCart, clearCart, validateStock } = useCart()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
   const [appliedDiscountCodes, setAppliedDiscountCodes] = useState<string[]>([])
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentInProgress, setPaymentInProgress] = useState(false)
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState(getDefaultShippingMethod().id)
+  const [stockValidationResult, setStockValidationResult] = useState<{
+    removedItems: any[]
+    updatedItems: any[]
+  } | null>(null)
 
-  const baseShipping = 9.99
-  const cartCalculation = calculateCartWithDiscounts(
-    items,
-    appliedDiscountCodes,
-    items.reduce((sum, item) => sum + item.product.price * item.quantity, 0) > 50 ? 0 : baseShipping,
-    0.08,
-  )
+  useEffect(() => {
+    if (items.length > 0) {
+      const result = validateStock()
+      if (result.removedItems.length > 0 || result.updatedItems.length > 0) {
+        setStockValidationResult(result)
+      } else {
+        setStockValidationResult(null)
+      }
+    }
+  }, [items, validateStock])
+
+  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  const shippingCost = calculateShippingCost(selectedShippingMethod, subtotal)
+
+  const cartCalculation = calculateCartWithDiscounts(items, appliedDiscountCodes, shippingCost, 0.08)
 
   const handleApplyDiscount = (code: string) => {
     if (!appliedDiscountCodes.includes(code.toUpperCase())) {
@@ -52,7 +68,12 @@ export default function CartPage() {
       return
     }
 
-    // Increment usage count for applied discounts
+    const stockResult = validateStock()
+    if (stockResult.removedItems.length > 0 || stockResult.updatedItems.length > 0) {
+      setStockValidationResult(stockResult)
+      return
+    }
+
     appliedDiscountCodes.forEach((code) => {
       incrementDiscountUsage(code)
     })
@@ -67,6 +88,10 @@ export default function CartPage() {
     setAppliedDiscountCodes([]) // Clear discounts after successful payment
   }
 
+  const dismissStockAlert = () => {
+    setStockValidationResult(null)
+  }
+
   if (items.length === 0 && !paymentInProgress) {
     return (
       <div className="min-h-screen bg-background">
@@ -78,12 +103,10 @@ export default function CartPage() {
             <p className="text-muted-foreground mb-8">
               Looks like you haven't added any items to your cart yet. Start shopping to fill it up!
             </p>
-            <Button size="lg" asChild>
-              <Link href="/products">
-                <FaArrowLeft className="mr-2 h-4 w-4" />
-                Continue Shopping
-              </Link>
-            </Button>
+            <BackButton fallbackUrl="/products" size="lg">
+              <FaArrowLeft className="mr-2 h-4 w-4" />
+              Continue Shopping
+            </BackButton>
           </div>
         </div>
       </div>
@@ -95,6 +118,12 @@ export default function CartPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <BackButton fallbackUrl="/products" className="mb-4">
+            Back to Shopping
+          </BackButton>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
           <p className="text-muted-foreground">{itemCount} items in your cart</p>
@@ -103,6 +132,47 @@ export default function CartPage() {
         <div className="mb-6">
           <DiscountBanner />
         </div>
+
+        {stockValidationResult &&
+          (stockValidationResult.removedItems.length > 0 || stockValidationResult.updatedItems.length > 0) && (
+            <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+              <FaExclamationTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium text-yellow-800">Cart Updated Due to Stock Changes</p>
+                  {stockValidationResult.removedItems.length > 0 && (
+                    <div>
+                      <p className="text-sm text-yellow-700">
+                        The following items were removed because they're no longer available:
+                      </p>
+                      <ul className="text-sm text-yellow-700 ml-4 list-disc">
+                        {stockValidationResult.removedItems.map((item) => (
+                          <li key={item.id}>{item.product.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {stockValidationResult.updatedItems.length > 0 && (
+                    <div>
+                      <p className="text-sm text-yellow-700">
+                        The following items had their quantities reduced due to limited stock:
+                      </p>
+                      <ul className="text-sm text-yellow-700 ml-4 list-disc">
+                        {stockValidationResult.updatedItems.map((item) => (
+                          <li key={item.id}>
+                            {item.product.name} (reduced to {item.quantity})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <Button variant="outline" size="sm" onClick={dismissStockAlert} className="mt-2 bg-transparent">
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
         {(items.length > 0 || paymentInProgress) && (
           <div className="grid lg:grid-cols-3 gap-8">
@@ -128,6 +198,11 @@ export default function CartPage() {
                               {item.product.category}
                             </Badge>
                             <p className="text-muted-foreground text-sm line-clamp-2">{item.product.description}</p>
+                            {item.product.outOfOrder && (
+                              <Badge variant="destructive" className="mt-2">
+                                Out of Order
+                              </Badge>
+                            )}
                           </div>
                           <Button
                             variant="ghost"
@@ -168,16 +243,20 @@ export default function CartPage() {
               ))}
 
               <div className="flex justify-between items-center pt-4">
-                <Button variant="outline" asChild>
-                  <Link href="/products">
-                    <FaArrowLeft className="mr-2 h-4 w-4" />
-                    Continue Shopping
-                  </Link>
-                </Button>
+                <BackButton fallbackUrl="/products" variant="outline">
+                  <FaArrowLeft className="mr-2 h-4 w-4" />
+                  Continue Shopping
+                </BackButton>
                 <Button variant="destructive" onClick={clearCart}>
                   Clear Cart
                 </Button>
               </div>
+
+              <ShippingMethodSelector
+                selectedMethodId={selectedShippingMethod}
+                onMethodChange={setSelectedShippingMethod}
+                subtotal={subtotal}
+              />
             </div>
 
             {/* Order Summary */}
@@ -227,7 +306,7 @@ export default function CartPage() {
                     onApplyDiscount={handleApplyDiscount}
                     onRemoveDiscount={handleRemoveDiscount}
                     cartItems={items}
-                    subtotal={cartCalculation.subtotal}
+                    subtotal={subtotal}
                   />
 
                   <Button className="w-full" size="lg" onClick={handleCheckout}>
@@ -247,6 +326,7 @@ export default function CartPage() {
         onClose={handlePaymentModalClose}
         orderTotal={cartCalculation.finalTotal}
         appliedDiscounts={cartCalculation.discounts}
+        selectedShippingMethodId={selectedShippingMethod}
       />
     </div>
   )

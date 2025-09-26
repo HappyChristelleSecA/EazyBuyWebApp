@@ -1,20 +1,4 @@
-export interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  originalPrice?: number
-  category: string
-  image: string
-  images: string[]
-  rating: number
-  reviewCount: number
-  inStock: boolean
-  featured: boolean
-  tags: string[]
-  quantity?: number
-  lowStockThreshold?: number
-}
+import type { Product } from "./products"
 
 export interface ProductCategory {
   id: string
@@ -92,6 +76,10 @@ export const products: Product[] = [
     tags: ["wireless", "bluetooth", "noise-cancelling"],
     quantity: 50,
     lowStockThreshold: 10,
+    color: "Black",
+    colors: ["Black", "White", "Silver"],
+    createdAt: "2023-01-01",
+    visible: true,
   },
   {
     id: "2",
@@ -108,6 +96,10 @@ export const products: Product[] = [
     tags: ["smartwatch", "fitness", "gps"],
     quantity: 30,
     lowStockThreshold: 5,
+    color: "Black",
+    colors: ["Black", "Silver", "Rose Gold"],
+    createdAt: "2023-01-02",
+    visible: true,
   },
   {
     id: "3",
@@ -125,6 +117,10 @@ export const products: Product[] = [
     tags: ["organic", "cotton", "sustainable"],
     quantity: 20,
     lowStockThreshold: 5,
+    color: "White",
+    colors: ["White", "Black", "Gray", "Navy", "Red"],
+    createdAt: "2023-01-03",
+    visible: true,
   },
   {
     id: "4",
@@ -141,6 +137,10 @@ export const products: Product[] = [
     tags: ["lamp", "modern", "usb-charging"],
     quantity: 15,
     lowStockThreshold: 3,
+    color: "White",
+    colors: ["White", "Black", "Gold"],
+    createdAt: "2023-01-04",
+    visible: true,
   },
   {
     id: "5",
@@ -157,6 +157,10 @@ export const products: Product[] = [
     tags: ["yoga", "exercise", "non-slip"],
     quantity: 10,
     lowStockThreshold: 2,
+    color: "Purple",
+    colors: ["Purple", "Blue", "Pink", "Green", "Black"],
+    createdAt: "2023-01-05",
+    visible: true,
   },
   {
     id: "6",
@@ -173,6 +177,10 @@ export const products: Product[] = [
     tags: ["javascript", "programming", "guide"],
     quantity: 5,
     lowStockThreshold: 1,
+    color: "Yellow",
+    colors: ["Yellow"],
+    createdAt: "2023-01-06",
+    visible: true,
   },
   {
     id: "7",
@@ -190,6 +198,10 @@ export const products: Product[] = [
     tags: ["wireless", "charger", "qi-enabled"],
     quantity: 25,
     lowStockThreshold: 5,
+    color: "Black",
+    colors: ["Black", "White"],
+    createdAt: "2023-01-07",
+    visible: true,
   },
   {
     id: "8",
@@ -206,6 +218,10 @@ export const products: Product[] = [
     tags: ["sunglasses", "designer", "uv-protection"],
     quantity: 0,
     lowStockThreshold: 1,
+    color: "Brown",
+    colors: ["Brown", "Black", "Gold"],
+    createdAt: "2023-01-08",
+    visible: true,
   },
   {
     id: "9",
@@ -223,6 +239,10 @@ export const products: Product[] = [
     tags: ["camera", "lens", "photography", "professional"],
     quantity: 8,
     lowStockThreshold: 2,
+    color: "Black",
+    colors: ["Black"],
+    createdAt: "2023-01-09",
+    visible: true,
   },
   {
     id: "10",
@@ -240,6 +260,10 @@ export const products: Product[] = [
     tags: ["handbag", "leather", "luxury", "fashion"],
     quantity: 12,
     lowStockThreshold: 3,
+    color: "Brown",
+    colors: ["Brown", "Black", "Tan"],
+    createdAt: "2023-01-10",
+    visible: true,
   },
   {
     id: "11",
@@ -256,6 +280,10 @@ export const products: Product[] = [
     tags: ["security", "camera", "smart-home", "4k"],
     quantity: 18,
     lowStockThreshold: 5,
+    color: "White",
+    colors: ["White", "Black"],
+    createdAt: "2023-01-11",
+    visible: true,
   },
   {
     id: "12",
@@ -273,6 +301,10 @@ export const products: Product[] = [
     tags: ["office", "chair", "ergonomic", "furniture"],
     quantity: 6,
     lowStockThreshold: 2,
+    color: "Black",
+    colors: ["Black", "Gray", "White"],
+    createdAt: "2023-01-12",
+    visible: true,
   },
   {
     id: "13",
@@ -289,6 +321,10 @@ export const products: Product[] = [
     tags: ["tennis", "racket", "professional", "sports"],
     quantity: 14,
     lowStockThreshold: 3,
+    color: "Red",
+    colors: ["Red", "Blue", "Black"],
+    createdAt: "2023-01-13",
+    visible: true,
   },
   {
     id: "14",
@@ -308,6 +344,10 @@ export const products: Product[] = [
     tags: ["chocolate", "artisan", "premium", "handcrafted"],
     quantity: 19,
     lowStockThreshold: 4,
+    color: "Brown",
+    colors: ["Brown"],
+    createdAt: "2023-01-14",
+    visible: true,
   },
   {
     id: "15",
@@ -328,6 +368,10 @@ export const products: Product[] = [
     tags: ["keyboard", "gaming", "mechanical", "rgb"],
     quantity: 22,
     lowStockThreshold: 5,
+    color: "Black",
+    colors: ["Black", "White"],
+    createdAt: "2023-01-15",
+    visible: true,
   },
   {
     id: "16",
@@ -344,6 +388,10 @@ export const products: Product[] = [
     tags: ["scarf", "silk", "luxury", "artistic"],
     quantity: 16,
     lowStockThreshold: 4,
+    color: "Blue",
+    colors: ["Blue", "Red", "Green", "Purple"],
+    createdAt: "2023-01-16",
+    visible: true,
   },
   {
     id: "17",
@@ -360,6 +408,10 @@ export const products: Product[] = [
     tags: ["plants", "indoor", "decoration", "low-maintenance"],
     quantity: 28,
     lowStockThreshold: 6,
+    color: "Green",
+    colors: ["Green"],
+    createdAt: "2023-01-17",
+    visible: true,
   },
   {
     id: "18",
@@ -380,6 +432,10 @@ export const products: Product[] = [
     tags: ["fitness", "resistance-bands", "workout", "home-gym"],
     quantity: 31,
     lowStockThreshold: 7,
+    color: "Multi",
+    colors: ["Multi", "Black", "Red"],
+    createdAt: "2023-01-18",
+    visible: true,
   },
   {
     id: "19",
@@ -388,7 +444,10 @@ export const products: Product[] = [
     price: 50.0,
     category: "Food & Beverages",
     image: "/elegant-gift-card-collection-with-various-denomina.jpg",
-    images: ["/digital-gift-card-design-with-elegant-typography.jpg", "/gift-card-presentation-in-premium-packaging.jpg"],
+    images: [
+      "/digital-gift-card-design-with-elegant-typography.jpg",
+      "/gift-card-presentation-in-premium-packaging.jpg",
+    ],
     rating: 4.9,
     reviewCount: 67,
     inStock: true,
@@ -396,6 +455,10 @@ export const products: Product[] = [
     tags: ["gift-card", "digital", "present", "versatile"],
     quantity: 100,
     lowStockThreshold: 10,
+    color: "Gold",
+    colors: ["Gold", "Silver"],
+    createdAt: "2023-01-19",
+    visible: true,
   },
   {
     id: "20",
@@ -413,24 +476,65 @@ export const products: Product[] = [
     tags: ["turntable", "vinyl", "vintage", "music"],
     quantity: 9,
     lowStockThreshold: 2,
+    color: "Wood",
+    colors: ["Wood", "Black", "White"],
+    createdAt: "2023-01-20",
+    visible: true,
   },
 ]
 
+let allProductsCache: Product[] | null = null
+
+export const getAllProducts = (): Product[] => {
+  if (typeof window !== "undefined" && allProductsCache === null) {
+    // Initialize cache on first access in browser
+    try {
+      const stored = localStorage.getItem("eazybuy_products")
+      if (stored) {
+        const parsedProducts = JSON.parse(stored)
+        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+          allProductsCache = parsedProducts
+          console.log("[v0] Loaded products from localStorage:", allProductsCache.length)
+          return allProductsCache
+        }
+      }
+    } catch (error) {
+      console.warn("[v0] Failed to load from localStorage:", error)
+    }
+
+    // Fallback to static products
+    allProductsCache = [...products]
+  }
+
+  return allProductsCache || products
+}
+
+export const getVisibleProducts = (): Product[] => {
+  return getAllProducts().filter((product) => product.visible !== false)
+}
+
 export const getProductById = (id: string): Product | undefined => {
-  return products.find((product) => product.id === id)
+  const allProducts = getAllProducts()
+  return allProducts.find((product) => product.id === id)
+}
+
+export const refreshProductsCache = (): void => {
+  if (typeof window !== "undefined") {
+    allProductsCache = null // Reset cache to force reload
+  }
 }
 
 export const getProductsByCategory = (category: string): Product[] => {
-  return products.filter((product) => product.category.toLowerCase() === category.toLowerCase())
+  return getVisibleProducts().filter((product) => product.category.toLowerCase() === category.toLowerCase())
 }
 
 export const getFeaturedProducts = (): Product[] => {
-  return products.filter((product) => product.featured)
+  return getVisibleProducts().filter((product) => product.featured)
 }
 
 export const searchProducts = (query: string): Product[] => {
   const lowercaseQuery = query.toLowerCase()
-  return products.filter(
+  return getVisibleProducts().filter(
     (product) =>
       product.name.toLowerCase().includes(lowercaseQuery) ||
       product.description.toLowerCase().includes(lowercaseQuery) ||
@@ -445,7 +549,7 @@ export const getSearchSuggestions = (query: string, limit = 5): string[] => {
   const suggestions = new Set<string>()
 
   // Add product names that match
-  products.forEach((product) => {
+  getVisibleProducts().forEach((product) => {
     if (product.name.toLowerCase().includes(lowercaseQuery)) {
       suggestions.add(product.name)
     }
@@ -459,7 +563,7 @@ export const getSearchSuggestions = (query: string, limit = 5): string[] => {
   })
 
   // Add tags that match
-  products.forEach((product) => {
+  getVisibleProducts().forEach((product) => {
     product.tags.forEach((tag) => {
       if (tag.toLowerCase().includes(lowercaseQuery)) {
         suggestions.add(tag)
@@ -471,10 +575,10 @@ export const getSearchSuggestions = (query: string, limit = 5): string[] => {
 }
 
 export const searchProductsEnhanced = (query: string): { products: Product[]; highlightTerm: string } => {
-  if (!query) return { products, highlightTerm: "" }
+  if (!query) return { products: getVisibleProducts(), highlightTerm: "" }
 
   const lowercaseQuery = query.toLowerCase()
-  const results = products.filter((product) => {
+  const results = getVisibleProducts().filter((product) => {
     const nameMatch = product.name.toLowerCase().includes(lowercaseQuery)
     const descriptionMatch = product.description.toLowerCase().includes(lowercaseQuery)
     const tagMatch = product.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))
@@ -498,7 +602,7 @@ export const searchProductsEnhanced = (query: string): { products: Product[]; hi
   return { products: results, highlightTerm: query }
 }
 
-export const getFilterCounts = (baseProducts: Product[] = products) => {
+export const getFilterCounts = (baseProducts: Product[] = getVisibleProducts()) => {
   const counts = {
     categories: {} as Record<string, number>,
     priceRanges: {
@@ -514,13 +618,24 @@ export const getFilterCounts = (baseProducts: Product[] = products) => {
       "2+": 0,
       "1+": 0,
     },
+    colors: {} as Record<string, number>,
     inStock: 0,
     onSale: 0,
+    outOfOrder: 0,
   }
 
   baseProducts.forEach((product) => {
     // Category counts
     counts.categories[product.category] = (counts.categories[product.category] || 0) + 1
+
+    // Color counts
+    if (product.colors) {
+      product.colors.forEach((color) => {
+        counts.colors[color] = (counts.colors[color] || 0) + 1
+      })
+    } else if (product.color) {
+      counts.colors[product.color] = (counts.colors[product.color] || 0) + 1
+    }
 
     // Price range counts
     if (product.price <= 25) counts.priceRanges["0-25"]++
@@ -538,6 +653,7 @@ export const getFilterCounts = (baseProducts: Product[] = products) => {
     // Stock and sale counts
     if (product.inStock) counts.inStock++
     if (product.originalPrice && product.originalPrice > product.price) counts.onSale++
+    if (product.outOfOrder) counts.outOfOrder++
   })
 
   return counts
@@ -551,6 +667,8 @@ export const filterProducts = (
     maxPrice?: number
     inStock?: boolean
     minRating?: number
+    outOfOrder?: boolean
+    color?: string
   },
 ): Product[] => {
   return products.filter((product) => {
@@ -559,6 +677,14 @@ export const filterProducts = (
     if (filters.maxPrice && product.price > filters.maxPrice) return false
     if (filters.inStock !== undefined && product.inStock !== filters.inStock) return false
     if (filters.minRating && product.rating < filters.minRating) return false
+    if (filters.outOfOrder !== undefined && product.outOfOrder !== filters.outOfOrder) return false
+
+    // Color filtering logic
+    if (filters.color) {
+      const hasColor = product.colors ? product.colors.includes(filters.color) : product.color === filters.color
+      if (!hasColor) return false
+    }
+
     return true
   })
 }
@@ -576,7 +702,11 @@ export const sortProducts = (products: Product[], sortBy: string): Product[] => 
     case "popularity":
       return sorted.sort((a, b) => b.reviewCount - a.reviewCount)
     case "newest":
-      return sorted.sort((a, b) => Number.parseInt(b.id) - Number.parseInt(a.id))
+      return sorted.sort((a, b) => {
+        const aDate = new Date(a.createdAt || "")
+        const bDate = new Date(b.createdAt || "")
+        return bDate.getTime() - aDate.getTime()
+      })
     case "discount":
       return sorted.sort((a, b) => {
         const aDiscount = a.originalPrice ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0
@@ -608,7 +738,7 @@ export const getProductWithInventory = (
 export const getProductsWithInventory = (): Array<Product & { availableQuantity: number; isLowStock: boolean }> => {
   const { getAvailableQuantity, isLowStock } = require("./inventory")
 
-  return products.map((product) => ({
+  return getVisibleProducts().map((product) => ({
     ...product,
     availableQuantity: getAvailableQuantity(product.id),
     isLowStock: isLowStock(product.id),

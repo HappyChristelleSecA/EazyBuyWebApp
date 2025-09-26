@@ -67,7 +67,9 @@ export default function OrdersPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Order #{order.id}</CardTitle>
+                      <Link href={`/dashboard/orders/${order.id}`} className="hover:text-primary">
+                        <CardTitle className="text-lg cursor-pointer hover:underline">Order #{order.id}</CardTitle>
+                      </Link>
                       <p className="text-sm text-muted-foreground">Placed on {order.orderDate.toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -121,26 +123,32 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    {order.status !== "pending" && tracking && (
-                      <div className="border-t pt-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <p className="font-medium">Shipping Address</p>
-                            <p className="text-sm text-muted-foreground">
-                              {order.shippingAddress.name}
-                              <br />
-                              {order.shippingAddress.street}
-                              <br />
-                              {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
-                              {order.shippingAddress.zipCode}
+                    {/* Shipping Address and Action Buttons */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-medium">Shipping Address</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.shippingAddress.name}
+                            <br />
+                            {order.shippingAddress.street}
+                            <br />
+                            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
+                          </p>
+                          {order.estimatedDelivery && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}
                             </p>
-                            {order.estimatedDelivery && (
-                              <p className="text-sm text-muted-foreground mt-2">
-                                Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex space-x-2">
+                          )}
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button asChild variant="default" size="sm">
+                            <Link href={`/dashboard/orders/${order.id}`}>
+                              <FaBox className="h-4 w-4 mr-2" />
+                              View Details
+                            </Link>
+                          </Button>
+                          {order.status !== "pending" && (
                             <Button variant="outline" size="sm" onClick={() => toggleOrderExpansion(order.id)}>
                               <FaTruck className="h-4 w-4 mr-2" />
                               {isExpanded ? "Hide Tracking" : "Track Order"}
@@ -150,17 +158,17 @@ export default function OrdersPage() {
                                 <FaChevronDown className="h-3 w-3 ml-2" />
                               )}
                             </Button>
-                          </div>
+                          )}
                         </div>
-
-                        {isExpanded && (
-                          <div className="space-y-4 mt-4">
-                            <OrderTrackingCard order={order} tracking={tracking} />
-                            <OrderTrackingTimeline events={tracking.events} currentStatus={tracking.currentStatus} />
-                          </div>
-                        )}
                       </div>
-                    )}
+
+                      {isExpanded && tracking && (
+                        <div className="space-y-4 mt-4">
+                          <OrderTrackingCard order={order} tracking={tracking} />
+                          <OrderTrackingTimeline events={tracking.events} currentStatus={tracking.currentStatus} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

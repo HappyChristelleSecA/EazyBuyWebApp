@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
+import { ForgotPasswordForm } from "./forgot-password-form"
 
 interface LoginFormProps {
   onToggleMode?: () => void
@@ -19,8 +21,18 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const { login, isLoading } = useAuth()
   const router = useRouter()
+
+  const handleBackToLogin = () => {
+    setShowForgotPassword(false)
+    setError("")
+  }
+
+  if (showForgotPassword) {
+    return <ForgotPasswordForm onBackToLogin={handleBackToLogin} />
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,10 +79,18 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+            <PasswordInput
               id="password"
-              type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

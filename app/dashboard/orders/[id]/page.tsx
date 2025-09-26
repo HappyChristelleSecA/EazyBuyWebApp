@@ -5,14 +5,34 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { getOrderById, getOrderStatusColor, getOrderStatusText, getOrderTracking } from "@/lib/orders"
+import {
+  getOrderById,
+  getOrderStatusColor,
+  getOrderStatusText,
+  getOrderTracking,
+  canCancelOrder,
+  canReturnOrder,
+  cancelOrder,
+  requestReturn,
+} from "@/lib/orders"
 import { OrderTrackingCard } from "@/components/orders/order-tracking-card"
 import { OrderTrackingTimeline } from "@/components/orders/order-tracking-timeline"
-import { FaArrowLeft, FaDownload, FaPrint } from "react-icons/fa"
+import { FaArrowLeft, FaDownload, FaPrint, FaTimes, FaUndo } from "react-icons/fa"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 interface OrderDetailPageProps {
   params: {
@@ -25,6 +45,42 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const router = useRouter()
   const order = getOrderById(params.id)
   const tracking = order ? getOrderTracking(order.id) : null
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [returnReason, setReturnReason] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  useEffect(() => {
+    console.log("[v0] Order Detail Page loaded")
+    console.log("[v0] Order ID:", params.id)
+    console.log("[v0] Order found:", order)
+
+    if (order) {
+      console.log("[v0] Order status:", order.status)
+      console.log("[v0] Order date:", order.orderDate)
+      console.log("[v0] Hours since order:", (Date.now() - order.orderDate.getTime()) / (1000 * 60 * 60))
+
+      const canCancel = canCancelOrder(order)
+      const canReturn = canReturnOrder(order)
+
+      console.log("[v0] Can cancel order:", canCancel)
+      console.log("[v0] Can return order:", canReturn)
+
+      if (canCancel) {
+        console.log("[v0] ✅ CANCEL BUTTON SHOULD BE VISIBLE")
+      } else {
+        console.log("[v0] ❌ Cancel button hidden - order too old or wrong status")
+      }
+
+      if (canReturn) {
+        console.log("[v0] ✅ RETURN BUTTON SHOULD BE VISIBLE")
+      } else {
+        console.log("[v0] ❌ Return button hidden - not delivered or too old")
+      }
+    }
+  }, [params.id, order])
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !user)) {
@@ -58,6 +114,40 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         </Card>
       </DashboardLayout>
     )
+  }
+
+  const handleCancelOrder = async () => {
+    if (!order) return
+
+    console.log("[v0] Cancel order clicked for:", order.id)
+    setIsProcessing(true)
+    const success = cancelOrder(order.id, cancelReason)
+    console.log("[v0] Cancel order result:", success)
+
+    if (success) {
+      console.log("[v0] Order cancelled successfully, refreshing data")
+      setCancelDialogOpen(false)
+      setCancelReason("")
+      router.refresh()
+    }
+    setIsProcessing(false)
+  }
+
+  const handleRequestReturn = async () => {
+    if (!order) return
+
+    console.log("[v0] Return order clicked for:", order.id)
+    setIsProcessing(true)
+    const success = requestReturn(order.id, returnReason)
+    console.log("[v0] Return order result:", success)
+
+    if (success) {
+      console.log("[v0] Return requested successfully, refreshing data")
+      setReturnDialogOpen(false)
+      setReturnReason("")
+      router.refresh()
+    }
+    setIsProcessing(false)
   }
 
   return (
@@ -207,6 +297,114 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               <FaPrint className="h-4 w-4" />
               Print Order
             </Button>
+
+            {order && canCancelOrder(order) && (
+              <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent border-red-300"
+                    onClick={() => {
+                      console.log("[v0] Cancel button clicked!")
+                      alert("Cancel Order button clicked! This order can be cancelled.")
+                    }}
+                  >
+                    <FaTimes className="h-4 w-4" />
+                    Cancel Order
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Cancel Order #{order.id}</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to cancel this order? This action cannot be undone. You can cancel orders
+                      within 24 hours of placement.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="cancel-reason">Reason for cancellation (optional)</Label>
+                      <Textarea
+                        id="cancel-reason"
+                        placeholder="Please let us know why you're cancelling this order..."
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                      Keep Order
+                    </Button>
+                    <Button variant="destructive" onClick={handleCancelOrder} disabled={isProcessing}>
+                      {isProcessing ? "Cancelling..." : "Cancel Order"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {order && canReturnOrder(order) && (
+              <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 bg-transparent border-orange-300"
+                    onClick={() => {
+                      console.log("[v0] Return button clicked!")
+                      alert("Return Order button clicked! This order can be returned.")
+                    }}
+                  >
+                    <FaUndo className="h-4 w-4" />
+                    Return Order
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Return Order #{order.id}</DialogTitle>
+                    <DialogDescription>
+                      Request a return for this order. Returns are accepted within 30 days of delivery. Our team will
+                      review your request and provide return instructions.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="return-reason">Reason for return</Label>
+                      <Textarea
+                        id="return-reason"
+                        placeholder="Please describe the reason for your return request..."
+                        value={returnReason}
+                        onChange={(e) => setReturnReason(e.target.value)}
+                        className="mt-2"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleRequestReturn} disabled={isProcessing || !returnReason.trim()}>
+                      {isProcessing ? "Requesting..." : "Request Return"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {order && !canCancelOrder(order) && !canReturnOrder(order) && (
+              <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded border">
+                <p>
+                  <strong>Debug Info:</strong>
+                </p>
+                <p>• Order Status: {order.status}</p>
+                <p>• Order Date: {order.orderDate.toLocaleDateString()}</p>
+                <p>• Hours since order: {Math.round((Date.now() - order.orderDate.getTime()) / (1000 * 60 * 60))}</p>
+                <p>• Can Cancel: {canCancelOrder(order) ? "Yes" : "No (need pending/processing status within 24h)"}</p>
+                <p>• Can Return: {canReturnOrder(order) ? "Yes" : "No (need delivered status within 30 days)"}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

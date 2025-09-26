@@ -3,21 +3,27 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FaStar, FaThumbsUp, FaCheckCircle } from "react-icons/fa"
-import { getReviewsByProductId, type Review } from "@/lib/reviews"
-import { useState } from "react"
+import { FaStar, FaThumbsUp, FaCheckCircle, FaTrash } from "react-icons/fa"
+import { getReviewsByProductId, deleteReview, type Review } from "@/lib/reviews"
+import { useAuth } from "@/hooks/use-auth"
+import { useState, useEffect } from "react"
 
 interface ReviewListProps {
   productId: string
+  refreshKey?: number
+  onReviewDeleted?: () => void
 }
 
 interface ReviewItemProps {
   review: Review
+  currentUserId?: string
+  onDelete: (reviewId: string) => void
 }
 
-function ReviewItem({ review }: ReviewItemProps) {
+function ReviewItem({ review, currentUserId, onDelete }: ReviewItemProps) {
   const [helpful, setHelpful] = useState(review.helpful)
   const [hasVoted, setHasVoted] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleHelpful = () => {
     if (!hasVoted) {
@@ -25,6 +31,23 @@ function ReviewItem({ review }: ReviewItemProps) {
       setHasVoted(true)
     }
   }
+
+  const handleDelete = async () => {
+    if (!currentUserId) return
+
+    setIsDeleting(true)
+    try {
+      deleteReview(review.id, currentUserId)
+      onDelete(review.id)
+    } catch (error) {
+      console.error("[v0] Error deleting review:", error)
+      alert("Failed to delete review")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const canDelete = currentUserId === review.userId
 
   return (
     <Card className="mb-4">
@@ -39,7 +62,20 @@ function ReviewItem({ review }: ReviewItemProps) {
               </Badge>
             )}
           </div>
-          <span className="text-sm text-muted-foreground">{review.date}</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">{review.date}</span>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <FaTrash className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center mb-2">
@@ -71,13 +107,38 @@ function ReviewItem({ review }: ReviewItemProps) {
   )
 }
 
-export function ReviewList({ productId }: ReviewListProps) {
-  const reviews = getReviewsByProductId(productId)
+export function ReviewList({ productId, refreshKey, onReviewDeleted }: ReviewListProps) {
+  const [reviews, setReviews] = useState<Review[]>([])
   const [showAll, setShowAll] = useState(false)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    console.log("[v0] ReviewList refreshing reviews for product", productId)
+    const productReviews = getReviewsByProductId(productId)
+    console.log("[v0] Found reviews:", productReviews.length)
+    setReviews(productReviews)
+  }, [productId, refreshKey])
+
+  const handleReviewDeleted = (reviewId: string) => {
+    console.log("[v0] Review deleted, refreshing list")
+    const updatedReviews = getReviewsByProductId(productId)
+    setReviews(updatedReviews)
+    onReviewDeleted?.()
+  }
+
   const displayedReviews = showAll ? reviews : reviews.slice(0, 3)
 
   if (reviews.length === 0) {
-    return null
+    return (
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold">Customer Reviews</h3>
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-muted-foreground">No reviews yet. Be the first to review this product!</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -85,7 +146,7 @@ export function ReviewList({ productId }: ReviewListProps) {
       <h3 className="text-xl font-semibold">Customer Reviews</h3>
 
       {displayedReviews.map((review) => (
-        <ReviewItem key={review.id} review={review} />
+        <ReviewItem key={review.id} review={review} currentUserId={user?.id} onDelete={handleReviewDeleted} />
       ))}
 
       {reviews.length > 3 && !showAll && (

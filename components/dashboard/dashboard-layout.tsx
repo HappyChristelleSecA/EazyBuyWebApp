@@ -1,7 +1,9 @@
+"use client"
 import type React from "react"
 import { Header } from "@/components/layout/header"
 import { DashboardNav } from "./dashboard-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BackButton } from "@/components/ui/back-button"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -23,6 +25,9 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
                 <CardTitle>My Account</CardTitle>
               </CardHeader>
               <CardContent>
+                <BackButton fallbackUrl="/" className="w-full mb-4" variant="outline">
+                  Back to Store
+                </BackButton>
                 <DashboardNav />
               </CardContent>
             </Card>

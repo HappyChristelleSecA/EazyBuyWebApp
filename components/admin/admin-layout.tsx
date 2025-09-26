@@ -1,6 +1,7 @@
 import type React from "react"
 import { Header } from "@/components/layout/header"
 import { AdminNav } from "./admin-nav"
+import { BackButton } from "@/components/ui/back-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface AdminLayoutProps {
@@ -23,6 +24,9 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                 <CardTitle>Admin Panel</CardTitle>
               </CardHeader>
               <CardContent>
+                <BackButton fallbackUrl="/" className="w-full mb-4" variant="outline">
+                  Back to Store
+                </BackButton>
                 <AdminNav />
               </CardContent>
             </Card>

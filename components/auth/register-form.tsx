@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,6 +25,8 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   const [showAccountExistsPopup, setShowAccountExistsPopup] = useState(false)
   const { register, isLoading } = useAuth()
   const router = useRouter()
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +45,12 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
 
     const result = await register(email, password, name)
     if (result.success) {
-      onToggleMode?.() // Switch to login form
+      setRegisteredEmail(email)
+      setShowSuccessMessage(true)
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        onToggleMode?.()
+      }, 2000)
     } else {
       if (result.error?.includes("already exists") || result.error?.includes("User already exists")) {
         setShowAccountExistsPopup(true)
@@ -54,8 +62,31 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   }
 
   const handleAccountExistsAction = () => {
-    setShowAccountExistsPopup(false)
-    onToggleMode?.() // Switch to login form
+    onToggleMode?.()
+  }
+
+  if (showSuccessMessage) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <CardTitle className="text-2xl font-bold">Account Created Successfully!</CardTitle>
+          <CardDescription>Welcome to EazyBuy! Your account has been created for {registeredEmail}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">Redirecting you to sign in...</p>
+            <Button onClick={() => onToggleMode?.()} className="w-full">
+              Continue to Sign In
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -115,9 +146,8 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               placeholder="Create a password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -126,9 +156,8 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               placeholder="Confirm your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

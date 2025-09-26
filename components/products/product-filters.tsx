@@ -9,8 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SearchAutocomplete } from "./search-autocomplete"
-import { categories, getFilterCounts } from "@/lib/products"
-import { FaFilter, FaTimes, FaTag, FaFire, FaStar } from "react-icons/fa"
+import { getFilterCounts } from "@/lib/products"
+import { FaFilter, FaTimes, FaTag, FaFire, FaStar, FaPalette } from "react-icons/fa"
 
 interface ProductFiltersProps {
   onFiltersChange: (filters: {
@@ -20,6 +20,7 @@ interface ProductFiltersProps {
     inStock?: boolean
     minRating?: number
     onSale?: boolean
+    color?: string
   }) => void
   onSearchChange: (query: string) => void
   totalProducts?: number
@@ -40,6 +41,7 @@ export function ProductFilters({
     inStock: false,
     minRating: "any",
     onSale: false,
+    color: "all",
   })
   const [searchQuery, setSearchQuery] = useState("")
   const [filterCounts, setFilterCounts] = useState<any>({})
@@ -61,6 +63,7 @@ export function ProductFilters({
     if (newFilters.inStock) processedFilters.inStock = newFilters.inStock
     if (newFilters.minRating !== "any") processedFilters.minRating = Number.parseFloat(newFilters.minRating)
     if (newFilters.onSale) processedFilters.onSale = newFilters.onSale
+    if (newFilters.color !== "all") processedFilters.color = newFilters.color
 
     onFiltersChange(processedFilters)
   }
@@ -78,6 +81,7 @@ export function ProductFilters({
       inStock: false,
       minRating: "any",
       onSale: false,
+      color: "all",
     }
     setFilters(clearedFilters)
     setSearchQuery("")
@@ -94,6 +98,11 @@ export function ProductFilters({
   const activeFiltersCount = Object.values(filters).filter(
     (value) => value !== "all" && value !== "any" && value !== "" && value !== false,
   ).length
+
+  const availableColors = Object.keys(filterCounts.colors || {}).sort()
+
+  const availableCategories =
+    filteredProducts.length > 0 ? [...new Set(filteredProducts.map((p) => p.category).filter(Boolean))] : []
 
   return (
     <div className="space-y-4">
@@ -146,13 +155,13 @@ export function ProductFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
+                {availableCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
                     <div className="flex items-center justify-between w-full">
-                      <span>{category.name}</span>
-                      {filterCounts.categories?.[category.name] && (
+                      <span>{category}</span>
+                      {filterCounts.categories?.[category] && (
                         <Badge variant="secondary" className="ml-2 text-xs">
-                          {filterCounts.categories[category.name]}
+                          {filterCounts.categories[category]}
                         </Badge>
                       )}
                     </div>
@@ -161,6 +170,52 @@ export function ProductFilters({
               </SelectContent>
             </Select>
           </div>
+
+          {availableColors.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <FaPalette className="h-4 w-4" />
+                Color
+              </Label>
+              <Select value={filters.color} onValueChange={(value) => handleFilterChange("color", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Colors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Colors</SelectItem>
+                  {availableColors.map((color) => (
+                    <SelectItem key={color} value={color}>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-4 h-4 rounded-full border border-gray-300"
+                            style={{
+                              backgroundColor:
+                                color.toLowerCase() === "multi"
+                                  ? "linear-gradient(45deg, red, blue, green)"
+                                  : color.toLowerCase() === "wood"
+                                    ? "#8B4513"
+                                    : color.toLowerCase() === "rose gold"
+                                      ? "#E8B4B8"
+                                      : color.toLowerCase() === "tan"
+                                        ? "#D2B48C"
+                                        : color.toLowerCase(),
+                            }}
+                          />
+                          <span>{color}</span>
+                        </div>
+                        {filterCounts.colors?.[color] && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {filterCounts.colors[color]}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Price Range</Label>

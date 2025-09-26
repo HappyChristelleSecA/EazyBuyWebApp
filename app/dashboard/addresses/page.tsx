@@ -41,6 +41,7 @@ export default function AddressesPage() {
     },
   ])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingAddress, setEditingAddress] = useState<Address | null>(null)
   const [formData, setFormData] = useState({
     name: "",
@@ -82,6 +83,7 @@ export default function AddressesPage() {
       zipCode: address.zipCode,
       country: address.country,
     })
+    setIsEditDialogOpen(true)
   }
 
   const handleUpdateAddress = () => {
@@ -89,6 +91,7 @@ export default function AddressesPage() {
     setAddresses(addresses.map((addr) => (addr.id === editingAddress.id ? { ...addr, ...formData } : addr)))
     setEditingAddress(null)
     setFormData({ name: "", street: "", city: "", state: "", zipCode: "", country: "Canada" })
+    setIsEditDialogOpen(false)
   }
 
   const handleDeleteAddress = (id: string) => {
@@ -216,6 +219,15 @@ export default function AddressesPage() {
           </Dialog>
         </div>
 
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Address</DialogTitle>
+            </DialogHeader>
+            <AddressForm onSubmit={handleUpdateAddress} submitText="Update Address" />
+          </DialogContent>
+        </Dialog>
+
         {addresses.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-6">
             {addresses.map((address) => (
@@ -227,19 +239,9 @@ export default function AddressesPage() {
                     {address.isDefault && <Badge variant="secondary">Default</Badge>}
                   </div>
                   <div className="flex space-x-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditAddress(address)}>
-                          <FaEdit className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Edit Address</DialogTitle>
-                        </DialogHeader>
-                        <AddressForm onSubmit={handleUpdateAddress} submitText="Update Address" />
-                      </DialogContent>
-                    </Dialog>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditAddress(address)}>
+                      <FaEdit className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

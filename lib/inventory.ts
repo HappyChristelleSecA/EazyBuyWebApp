@@ -24,12 +24,13 @@ export interface StockAlert {
   id: string
   productId: string
   productName: string
-  type: "low_stock" | "out_of_stock" | "overstock"
+  type: "low_stock" | "out_of_stock" | "overstock" | "out_of_order" // Added out_of_order alert type
   currentQuantity: number
   threshold: number
   severity: "low" | "medium" | "high"
   date: Date
   acknowledged: boolean
+  outOfOrderReason?: string // Added reason field for out-of-order alerts
 }
 
 // Mock inventory data
@@ -106,6 +107,114 @@ export const inventory: InventoryItem[] = [
     supplier: "FashionHub",
     location: "Warehouse B",
   },
+  {
+    productId: "9",
+    quantity: 8,
+    lowStockThreshold: 2,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "TechSupplier Inc",
+    location: "Warehouse A",
+  },
+  {
+    productId: "10",
+    quantity: 12,
+    lowStockThreshold: 3,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "FashionHub",
+    location: "Warehouse B",
+  },
+  {
+    productId: "11",
+    quantity: 18,
+    lowStockThreshold: 5,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "TechSupplier Inc",
+    location: "Warehouse A",
+  },
+  {
+    productId: "12",
+    quantity: 6,
+    lowStockThreshold: 2,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "HomeDecor Ltd",
+    location: "Warehouse B",
+  },
+  {
+    productId: "13",
+    quantity: 14,
+    lowStockThreshold: 3,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "SportsPro",
+    location: "Warehouse C",
+  },
+  {
+    productId: "14",
+    quantity: 19,
+    lowStockThreshold: 4,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "GourmetFoods",
+    location: "Warehouse D",
+  },
+  {
+    productId: "15",
+    quantity: 22,
+    lowStockThreshold: 5,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "TechSupplier Inc",
+    location: "Warehouse A",
+  },
+  {
+    productId: "16",
+    quantity: 16,
+    lowStockThreshold: 4,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "FashionHub",
+    location: "Warehouse B",
+  },
+  {
+    productId: "17",
+    quantity: 28,
+    lowStockThreshold: 6,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "GardenSupply",
+    location: "Warehouse D",
+  },
+  {
+    productId: "18",
+    quantity: 31,
+    lowStockThreshold: 7,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "SportsPro",
+    location: "Warehouse C",
+  },
+  {
+    productId: "19",
+    quantity: 100,
+    lowStockThreshold: 10,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "GiftCard Co",
+    location: "Digital",
+  },
+  {
+    productId: "20",
+    quantity: 9,
+    lowStockThreshold: 2,
+    reserved: 0,
+    lastUpdated: new Date(),
+    supplier: "VintageAudio",
+    location: "Warehouse A",
+  },
 ]
 
 // Mock transaction history
@@ -144,6 +253,8 @@ export const inventoryTransactions: InventoryTransaction[] = [
   },
 ]
 
+import { products } from "./products"
+
 export const getInventoryByProductId = (productId: string): InventoryItem | undefined => {
   return inventory.find((item) => item.productId === productId)
 }
@@ -162,14 +273,86 @@ export const isLowStock = (productId: string): boolean => {
   return item ? item.quantity <= item.lowStockThreshold : false
 }
 
+export const markProductOutOfOrder = (
+  productId: string,
+  reason: string,
+  estimatedRestoreDate?: Date,
+  userId?: string,
+): boolean => {
+  const productIndex = products.findIndex((p: any) => p.id === productId)
+
+  if (productIndex === -1) return false
+
+  // Update product status
+  products[productIndex].outOfOrder = true
+  products[productIndex].outOfOrderReason = reason
+  products[productIndex].outOfOrderDate = new Date()
+  products[productIndex].estimatedRestoreDate = estimatedRestoreDate
+
+  // Add transaction record
+  inventoryTransactions.push({
+    id: `txn-${Date.now()}`,
+    productId,
+    type: "adjustment",
+    quantity: 0,
+    previousQuantity: products[productIndex].quantity || 0,
+    newQuantity: products[productIndex].quantity || 0,
+    reason: `Marked out of order: ${reason}`,
+    userId,
+    date: new Date(),
+  })
+
+  return true
+}
+
+export const restoreProductFromOutOfOrder = (productId: string, userId?: string): boolean => {
+  const productIndex = products.findIndex((p: any) => p.id === productId)
+
+  if (productIndex === -1) return false
+
+  // Update product status
+  products[productIndex].outOfOrder = false
+  products[productIndex].outOfOrderReason = undefined
+  products[productIndex].outOfOrderDate = undefined
+  products[productIndex].estimatedRestoreDate = undefined
+
+  // Add transaction record
+  inventoryTransactions.push({
+    id: `txn-${Date.now()}`,
+    productId,
+    type: "adjustment",
+    quantity: 0,
+    previousQuantity: products[productIndex].quantity || 0,
+    newQuantity: products[productIndex].quantity || 0,
+    reason: "Restored from out of order status",
+    userId,
+    date: new Date(),
+  })
+
+  return true
+}
+
 export const getStockAlerts = (): StockAlert[] => {
   const alerts: StockAlert[] = []
 
   inventory.forEach((item) => {
-    const product = require("./products").products.find((p: any) => p.id === item.productId)
+    const product = products.find((p: any) => p.id === item.productId)
     if (!product) return
 
-    if (item.quantity === 0) {
+    if (product.outOfOrder) {
+      alerts.push({
+        id: `alert-${item.productId}-out-of-order`,
+        productId: item.productId,
+        productName: product.name,
+        type: "out_of_order",
+        currentQuantity: item.quantity,
+        threshold: 0,
+        severity: "high",
+        date: product.outOfOrderDate || new Date(),
+        acknowledged: false,
+        outOfOrderReason: product.outOfOrderReason,
+      })
+    } else if (item.quantity === 0) {
       alerts.push({
         id: `alert-${item.productId}-out`,
         productId: item.productId,
@@ -200,6 +383,26 @@ export const getStockAlerts = (): StockAlert[] => {
     const severityOrder = { high: 3, medium: 2, low: 1 }
     return severityOrder[b.severity] - severityOrder[a.severity]
   })
+}
+
+export const getInventoryReport = () => {
+  const totalProducts = inventory.length
+  const lowStockItems = inventory.filter((item) => isLowStock(item.productId)).length
+  const outOfStockItems = inventory.filter((item) => item.quantity === 0).length
+  const outOfOrderItems = products.filter((p: any) => p.outOfOrder).length
+  const totalValue = inventory.reduce((sum, item) => {
+    const product = products.find((p: any) => p.id === item.productId)
+    return sum + (product ? product.price * item.quantity : 0)
+  }, 0)
+
+  return {
+    totalProducts,
+    lowStockItems,
+    outOfStockItems,
+    outOfOrderItems, // Added out-of-order items to report
+    totalValue,
+    alerts: getStockAlerts(),
+  }
 }
 
 export const reserveStock = (productId: string, quantity: number): boolean => {
@@ -296,24 +499,6 @@ export const processOrder = (productId: string, quantity: number): boolean => {
   })
 
   return true
-}
-
-export const getInventoryReport = () => {
-  const totalProducts = inventory.length
-  const lowStockItems = inventory.filter((item) => isLowStock(item.productId)).length
-  const outOfStockItems = inventory.filter((item) => item.quantity === 0).length
-  const totalValue = inventory.reduce((sum, item) => {
-    const product = require("./products").products.find((p: any) => p.id === item.productId)
-    return sum + (product ? product.price * item.quantity : 0)
-  }, 0)
-
-  return {
-    totalProducts,
-    lowStockItems,
-    outOfStockItems,
-    totalValue,
-    alerts: getStockAlerts(),
-  }
 }
 
 export const bulkUpdateStock = (

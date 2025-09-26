@@ -1,6 +1,14 @@
 import type { Product } from "./products"
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "return_requested"
+  | "returned"
+  | "refunded"
 
 export interface OrderItem {
   id: string
@@ -29,6 +37,12 @@ export interface Order {
     country: string
   }
   trackingNumber?: string
+  shippingMethod?: {
+    id: string
+    name: string
+    cost: number
+    estimatedDays: string
+  }
 }
 
 // Mock orders data
@@ -74,6 +88,12 @@ export const mockOrders: Order[] = [
       zipCode: "10001",
       country: "USA",
     },
+    shippingMethod: {
+      id: "SHM-001",
+      name: "Free Shipping",
+      cost: 0,
+      estimatedDays: "7-10 days",
+    },
   },
   {
     id: "ORD-002",
@@ -116,6 +136,12 @@ export const mockOrders: Order[] = [
       zipCode: "10001",
       country: "USA",
     },
+    shippingMethod: {
+      id: "SHM-002",
+      name: "Standard Shipping",
+      cost: 9.99,
+      estimatedDays: "5-7 days",
+    },
   },
   {
     id: "ORD-003",
@@ -157,6 +183,12 @@ export const mockOrders: Order[] = [
       zipCode: "10001",
       country: "USA",
     },
+    shippingMethod: {
+      id: "SHM-003",
+      name: "Express Shipping",
+      cost: 19.99,
+      estimatedDays: "3-5 days",
+    },
   },
 ]
 
@@ -180,6 +212,12 @@ export const getOrderStatusColor = (status: OrderStatus): string => {
       return "bg-green-100 text-green-800"
     case "cancelled":
       return "bg-red-100 text-red-800"
+    case "return_requested":
+      return "bg-orange-100 text-orange-800"
+    case "returned":
+      return "bg-gray-100 text-gray-800"
+    case "refunded":
+      return "bg-indigo-100 text-indigo-800"
     default:
       return "bg-gray-100 text-gray-800"
   }
@@ -197,6 +235,12 @@ export const getOrderStatusText = (status: OrderStatus): string => {
       return "Delivered"
     case "cancelled":
       return "Cancelled"
+    case "return_requested":
+      return "Return Requested"
+    case "returned":
+      return "Returned"
+    case "refunded":
+      return "Refunded"
     default:
       return "Unknown"
   }
@@ -375,6 +419,12 @@ export const getOrderStatusIcon = (status: OrderStatus): string => {
       return "FaCheckCircle"
     case "cancelled":
       return "FaTimesCircle"
+    case "return_requested":
+      return "FaUndo"
+    case "returned":
+      return "FaRedo"
+    case "refunded":
+      return "FaMoneyBillAlt"
     default:
       return "FaQuestion"
   }
@@ -395,6 +445,12 @@ export const createOrder = (orderData: {
     country: string
   }
   appliedDiscounts?: { code: string; amount: number }[]
+  shippingMethod?: {
+    id: string
+    name: string
+    cost: number
+    estimatedDays: string
+  }
 }): Order => {
   const orderId = `ORD-${Date.now()}`
   const trackingNumber = `TRK${Math.random().toString(36).substr(2, 9).toUpperCase()}`
@@ -404,7 +460,7 @@ export const createOrder = (orderData: {
     userId: orderData.userId,
     items: orderData.items,
     subtotal: orderData.subtotal,
-    shipping: 0, // Free shipping for now
+    shipping: orderData.shippingMethod?.cost || 0,
     tax: orderData.tax,
     total: orderData.total,
     status: "pending",
@@ -412,6 +468,7 @@ export const createOrder = (orderData: {
     estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     trackingNumber,
     shippingAddress: orderData.shippingAddress,
+    shippingMethod: orderData.shippingMethod,
   }
 
   // Add to mock orders array
@@ -441,4 +498,30 @@ export const getUserOrderStats = (userId: string) => {
     totalSpent,
     recentOrders: userOrders.slice(-3).reverse(), // Last 3 orders, most recent first
   }
+}
+
+export const canCancelOrder = (order: Order): boolean => {
+  // Can cancel within 24 hours if order is pending or processing
+  const hoursSinceOrder = (Date.now() - order.orderDate.getTime()) / (1000 * 60 * 60)
+  return (order.status === "pending" || order.status === "processing") && hoursSinceOrder <= 24
+}
+
+export const canReturnOrder = (order: Order): boolean => {
+  // Can return within 30 days if order is delivered
+  const daysSinceDelivery = (Date.now() - order.orderDate.getTime()) / (1000 * 60 * 60 * 24)
+  return order.status === "delivered" && daysSinceDelivery <= 30
+}
+
+export const cancelOrder = (orderId: string, reason?: string): boolean => {
+  const order = getOrderById(orderId)
+  if (!order || !canCancelOrder(order)) return false
+
+  return updateOrderStatus(orderId, "cancelled", reason || "Order cancelled by customer")
+}
+
+export const requestReturn = (orderId: string, reason?: string): boolean => {
+  const order = getOrderById(orderId)
+  if (!order || !canReturnOrder(order)) return false
+
+  return updateOrderStatus(orderId, "return_requested", reason || "Return requested by customer")
 }

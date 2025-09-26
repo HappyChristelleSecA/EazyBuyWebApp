@@ -1,3 +1,6 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { FaStar } from "react-icons/fa"
@@ -5,10 +8,18 @@ import { getReviewStats } from "@/lib/reviews"
 
 interface ReviewSummaryProps {
   productId: string
+  refreshKey?: number
 }
 
-export function ReviewSummary({ productId }: ReviewSummaryProps) {
-  const stats = getReviewStats(productId)
+export function ReviewSummary({ productId, refreshKey }: ReviewSummaryProps) {
+  const [stats, setStats] = useState(() => getReviewStats(productId))
+
+  useEffect(() => {
+    console.log("[v0] ReviewSummary refreshing stats for product", productId)
+    const newStats = getReviewStats(productId)
+    console.log("[v0] Updated stats:", newStats)
+    setStats(newStats)
+  }, [productId, refreshKey])
 
   if (stats.totalReviews === 0) {
     return (

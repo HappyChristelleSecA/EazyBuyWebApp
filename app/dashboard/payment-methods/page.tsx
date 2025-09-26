@@ -1,211 +1,202 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type React from "react"
+
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { FaCreditCard, FaPlus, FaEdit, FaTrash } from "react-icons/fa"
+import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+
+const MenuIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+    />
+  </svg>
+)
+
+const PlusIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+)
+
+const StarIcon = () => (
+  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+)
+
+const CreditCardIcon = () => (
+  <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+    />
+  </svg>
+)
+
+const LockIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+    />
+  </svg>
+)
+
+const EditIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
+  </svg>
+)
+
+const TrashIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
+  </svg>
+)
 
 interface PaymentMethod {
   id: string
-  type: "credit" | "debit" | "paypal"
+  brand: string
   cardNumber: string
   expiryDate: string
+  cvv: string
   cardholderName: string
+  billingAddress?: string
+  city?: string
+  zipCode?: string
+  type: string
   isDefault: boolean
-  brand: string
 }
 
-export default function PaymentMethodsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth()
-  const router = useRouter()
-  const [pageLoading, setPageLoading] = useState(true)
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null)
+const initialPaymentMethods: PaymentMethod[] = [
+  {
+    id: "1",
+    brand: "Visa",
+    cardNumber: "************1234",
+    expiryDate: "12/24",
+    cvv: "***",
+    cardholderName: "John Doe",
+    billingAddress: "123 Main St",
+    city: "Anytown",
+    zipCode: "12345",
+    type: "credit",
+    isDefault: true,
+  },
+  {
+    id: "2",
+    brand: "Mastercard",
+    cardNumber: "************5678",
+    expiryDate: "01/25",
+    cvv: "***",
+    cardholderName: "Jane Smith",
+    billingAddress: "456 Oak Ave",
+    city: "Springfield",
+    zipCode: "67890",
+    type: "credit",
+    isDefault: false,
+  },
+]
+
+const PaymentMethodsPage = () => {
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "delete">("add")
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null)
   const [formData, setFormData] = useState({
-    type: "credit" as "credit" | "debit" | "paypal",
     cardNumber: "",
     expiryDate: "",
-    cardholderName: "",
     cvv: "",
-    brand: "Visa",
+    cardholderName: "",
+    billingAddress: "",
+    city: "",
+    zipCode: "",
   })
 
-  useEffect(() => {
-    if (user?.id) {
-      const storageKey = `paymentMethods_${user.id}`
-      const savedMethods = localStorage.getItem(storageKey)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }))
+  }
 
-      if (savedMethods) {
-        try {
-          const parsedMethods = JSON.parse(savedMethods)
-          setPaymentMethods(parsedMethods)
-          console.log("[v0] Loaded payment methods from storage:", parsedMethods)
-        } catch (error) {
-          console.error("[v0] Error parsing saved payment methods:", error)
-          // Set default payment method if parsing fails
-          const defaultMethod: PaymentMethod = {
-            id: "1",
-            type: "credit",
-            cardNumber: "**** **** **** 4242",
-            expiryDate: "12/2025",
-            cardholderName: user.name || "John Doe",
-            isDefault: true,
-            brand: "Visa",
-          }
-          setPaymentMethods([defaultMethod])
-          savePaymentMethods([defaultMethod])
-        }
-      } else {
-        // Set default payment method for new users
-        const defaultMethod: PaymentMethod = {
-          id: "1",
-          type: "credit",
-          cardNumber: "**** **** **** 4242",
-          expiryDate: "12/2025",
-          cardholderName: user.name || "John Doe",
-          isDefault: true,
-          brand: "Visa",
-        }
-        setPaymentMethods([defaultMethod])
-        savePaymentMethods([defaultMethod])
+  const handleSubmit = () => {
+    if (modalMode === "add") {
+      const newMethod: PaymentMethod = {
+        id: String(Date.now()), // Simple ID generation
+        brand: "Unknown", // You might want to implement brand detection
+        cardNumber: formData.cardNumber,
+        expiryDate: formData.expiryDate,
+        cvv: formData.cvv,
+        cardholderName: formData.cardholderName,
+        billingAddress: formData.billingAddress,
+        city: formData.city,
+        zipCode: formData.zipCode,
+        type: "credit", // Default type
+        isDefault: false,
       }
-    }
-  }, [user?.id, user?.name])
-
-  const savePaymentMethods = (methods: PaymentMethod[]) => {
-    if (user?.id) {
-      const storageKey = `paymentMethods_${user.id}`
-      localStorage.setItem(storageKey, JSON.stringify(methods))
-      console.log("[v0] Saved payment methods to storage:", methods)
-    }
-  }
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated || !user) {
-        router.push("/auth")
-        return
-      }
-      setPageLoading(false)
-    }
-  }, [isAuthenticated, user, router, isLoading])
-
-  const maskCardNumber = (cardNumber: string) => {
-    const cleaned = cardNumber.replace(/\D/g, "")
-    if (cleaned.length <= 4) return cleaned
-    return "**** **** **** " + cleaned.slice(-4)
-  }
-
-  const validateForm = () => {
-    if (formData.type === "paypal") {
-      return formData.cardholderName.trim() !== ""
-    }
-    return (
-      formData.cardNumber.replace(/\D/g, "").length >= 13 &&
-      formData.expiryDate.match(/^\d{2}\/\d{2}$/) &&
-      formData.cardholderName.trim() !== "" &&
-      formData.cvv.length >= 3
-    )
-  }
-
-  const handleAddPaymentMethod = () => {
-    if (!validateForm()) {
-      alert("Please fill in all required fields correctly")
-      return
+      setPaymentMethods([...paymentMethods, newMethod])
+    } else if (modalMode === "edit" && selectedMethod) {
+      const updatedMethods = paymentMethods.map((method) =>
+        method.id === selectedMethod.id
+          ? {
+              ...method,
+              cardNumber: formData.cardNumber,
+              expiryDate: formData.expiryDate,
+              cardholderName: formData.cardholderName,
+              billingAddress: formData.billingAddress,
+              city: formData.city,
+              zipCode: formData.zipCode,
+            }
+          : method,
+      )
+      setPaymentMethods(updatedMethods)
     }
 
-    const maskedCardNumber = formData.type === "paypal" ? "PayPal Account" : maskCardNumber(formData.cardNumber)
-    const newMethod: PaymentMethod = {
-      id: Date.now().toString(),
-      type: formData.type,
-      cardNumber: maskedCardNumber,
-      expiryDate: formData.expiryDate,
-      cardholderName: formData.cardholderName,
-      brand: formData.brand,
-      isDefault: paymentMethods.length === 0,
-    }
-
-    const updatedMethods = [...paymentMethods, newMethod]
-    setPaymentMethods(updatedMethods)
-    savePaymentMethods(updatedMethods)
-
-    setFormData({ type: "credit", cardNumber: "", expiryDate: "", cardholderName: "", cvv: "", brand: "Visa" })
-    setIsAddDialogOpen(false)
-    console.log("[v0] Added new payment method:", newMethod)
-  }
-
-  const handleEditPaymentMethod = (method: PaymentMethod) => {
-    setEditingMethod(method)
-    const cardNumber = method.cardNumber.includes("PayPal")
-      ? ""
-      : method.cardNumber.replace(/\*/g, "").replace(/\s/g, "")
+    setIsModalOpen(false)
+    setSelectedMethod(null)
     setFormData({
-      type: method.type,
-      cardNumber: cardNumber,
-      expiryDate: method.expiryDate,
-      cardholderName: method.cardholderName,
+      cardNumber: "",
+      expiryDate: "",
       cvv: "",
-      brand: method.brand,
+      cardholderName: "",
+      billingAddress: "",
+      city: "",
+      zipCode: "",
     })
-    setIsEditDialogOpen(true)
-    console.log("[v0] Editing payment method:", method)
   }
 
-  const handleUpdatePaymentMethod = () => {
-    if (!editingMethod || !validateForm()) {
-      alert("Please fill in all required fields correctly")
-      return
+  const handleDelete = () => {
+    if (selectedMethod) {
+      const updatedMethods = paymentMethods.filter((method) => method.id !== selectedMethod.id)
+      setPaymentMethods(updatedMethods)
+      setIsModalOpen(false)
+      setSelectedMethod(null)
     }
-
-    const maskedCardNumber = formData.type === "paypal" ? "PayPal Account" : maskCardNumber(formData.cardNumber)
-
-    const updatedMethods = paymentMethods.map((method) =>
-      method.id === editingMethod.id
-        ? {
-            ...method,
-            type: formData.type,
-            cardNumber: maskedCardNumber,
-            expiryDate: formData.expiryDate,
-            cardholderName: formData.cardholderName,
-            brand: formData.brand,
-          }
-        : method,
-    )
-
-    setPaymentMethods(updatedMethods)
-    savePaymentMethods(updatedMethods)
-
-    setEditingMethod(null)
-    setIsEditDialogOpen(false)
-    setFormData({ type: "credit", cardNumber: "", expiryDate: "", cardholderName: "", cvv: "", brand: "Visa" })
-    console.log("[v0] Updated payment method:", editingMethod.id)
-  }
-
-  const handleDeletePaymentMethod = (id: string) => {
-    if (!confirm("Are you sure you want to delete this payment method?")) {
-      return
-    }
-
-    const methodToDelete = paymentMethods.find((method) => method.id === id)
-    const updatedMethods = paymentMethods.filter((method) => method.id !== id)
-
-    if (methodToDelete?.isDefault && updatedMethods.length > 0) {
-      updatedMethods[0].isDefault = true
-    }
-
-    setPaymentMethods(updatedMethods)
-    savePaymentMethods(updatedMethods)
-    console.log("[v0] Deleted payment method:", id)
   }
 
   const handleSetDefault = (id: string) => {
@@ -213,215 +204,251 @@ export default function PaymentMethodsPage() {
       ...method,
       isDefault: method.id === id,
     }))
-
     setPaymentMethods(updatedMethods)
-    savePaymentMethods(updatedMethods)
-    console.log("[v0] Set default payment method:", id)
   }
 
-  const formatCardNumber = (value: string) => {
-    const cleaned = value.replace(/\D/g, "")
-    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, "$1 ")
-    return formatted
+  const openAddModal = () => {
+    console.log("[v0] Opening add modal") // Added debug logging
+    setModalMode("add")
+    setIsModalOpen(true)
+    setFormData({
+      cardNumber: "",
+      expiryDate: "",
+      cvv: "",
+      cardholderName: "",
+      billingAddress: "",
+      city: "",
+      zipCode: "",
+    })
   }
 
-  const formatExpiryDate = (value: string) => {
-    const cleaned = value.replace(/\D/g, "")
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + "/" + cleaned.substring(2, 4)
-    }
-    return cleaned
+  const openEditModal = (method: PaymentMethod) => {
+    console.log("[v0] Opening edit modal for method:", method.id) // Added debug logging
+    setModalMode("edit")
+    setIsModalOpen(true)
+    setSelectedMethod(method)
+    setFormData({
+      cardNumber: method.cardNumber.replace(/\*/g, "").replace(/\s/g, ""), // Remove masking for editing
+      expiryDate: method.expiryDate,
+      cvv: "",
+      cardholderName: method.cardholderName,
+      billingAddress: method.billingAddress || "",
+      city: method.city || "",
+      zipCode: method.zipCode || "",
+    })
   }
 
-  const PaymentMethodForm = ({ onSubmit, submitText }: { onSubmit: () => void; submitText: string }) => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="type">Payment Type</Label>
-        <Select
-          value={formData.type}
-          onValueChange={(value: "credit" | "debit" | "paypal") => setFormData({ ...formData, type: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="credit">Credit Card</SelectItem>
-            <SelectItem value="debit">Debit Card</SelectItem>
-            <SelectItem value="paypal">PayPal</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {formData.type !== "paypal" && (
-        <>
-          <div>
-            <Label htmlFor="cardNumber">Card Number</Label>
-            <Input
-              id="cardNumber"
-              value={formData.cardNumber}
-              onChange={(e) => setFormData({ ...formData, cardNumber: formatCardNumber(e.target.value) })}
-              placeholder="1234 5678 9012 3456"
-              maxLength={19}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="expiryDate">Expiry Date</Label>
-              <Input
-                id="expiryDate"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: formatExpiryDate(e.target.value) })}
-                placeholder="MM/YY"
-                maxLength={5}
-              />
-            </div>
-            <div>
-              <Label htmlFor="cvv">CVV</Label>
-              <Input
-                id="cvv"
-                type="password"
-                value={formData.cvv}
-                onChange={(e) => setFormData({ ...formData, cvv: e.target.value.replace(/\D/g, "") })}
-                placeholder="123"
-                maxLength={4}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="cardholderName">Cardholder Name</Label>
-            <Input
-              id="cardholderName"
-              value={formData.cardholderName}
-              onChange={(e) => setFormData({ ...formData, cardholderName: e.target.value })}
-              placeholder="John Doe"
-            />
-          </div>
-          <div>
-            <Label htmlFor="brand">Card Brand</Label>
-            <Select value={formData.brand} onValueChange={(value) => setFormData({ ...formData, brand: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Visa">Visa</SelectItem>
-                <SelectItem value="Mastercard">Mastercard</SelectItem>
-                <SelectItem value="American Express">American Express</SelectItem>
-                <SelectItem value="Discover">Discover</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </>
-      )}
-
-      {formData.type === "paypal" && (
-        <div>
-          <Label htmlFor="cardholderName">Account Name</Label>
-          <Input
-            id="cardholderName"
-            value={formData.cardholderName}
-            onChange={(e) => setFormData({ ...formData, cardholderName: e.target.value })}
-            placeholder="Your PayPal account name"
-          />
-        </div>
-      )}
-
-      <Button onClick={onSubmit} className="w-full" disabled={!validateForm()}>
-        {submitText}
-      </Button>
-    </div>
-  )
+  const openDeleteModal = (method: PaymentMethod) => {
+    console.log("[v0] Opening delete modal for method:", method.id) // Added debug logging
+    setModalMode("delete")
+    setIsModalOpen(true)
+    setSelectedMethod(method)
+  }
 
   return (
-    <DashboardLayout title="Payment Methods" description="Manage your payment methods and billing information">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">Manage your saved payment methods for faster checkout</p>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <FaPlus className="h-4 w-4 mr-2" />
-                Add Payment Method
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Payment Method</DialogTitle>
-              </DialogHeader>
-              <PaymentMethodForm onSubmit={handleAddPaymentMethod} submitText="Add Payment Method" />
-            </DialogContent>
-          </Dialog>
+    <div className="container py-12">
+      <h1 className="text-3xl font-semibold mb-6">Payment Methods</h1>
+
+      <Alert>
+        <AlertDescription>
+          <strong className="font-medium">Important!</strong> For security reasons, we only display the last 4 digits of
+          your card number.
+        </AlertDescription>
+      </Alert>
+
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-8">
+          <p className="text-gray-600">Securely store your payment methods for faster checkout</p>
+          <Button onClick={openAddModal} className="flex items-center gap-2">
+            <PlusIcon />
+            Add Payment Method
+          </Button>
         </div>
 
-        {paymentMethods.length > 0 ? (
+        {paymentMethods.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <CreditCardIcon />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Payment Methods</h3>
+              <p className="text-gray-600 mb-6">Add a payment method to get started with faster checkout</p>
+              <Button onClick={openAddModal} className="flex items-center gap-2 mx-auto">
+                <PlusIcon />
+                Add Your First Payment Method
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {paymentMethods.map((method) => (
-              <Card key={method.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                  <div className="flex items-center space-x-2">
-                    <FaCreditCard className="h-4 w-4" />
-                    <CardTitle className="text-lg">
-                      {method.brand} {method.type}
-                    </CardTitle>
-                    {method.isDefault && <Badge variant="secondary">Default</Badge>}
+              <Card key={method.id} className="relative">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center space-x-3">
+                      <CreditCardIcon />
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          {method.brand} {method.cardNumber}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          {method.isDefault && (
+                            <Badge variant="default" className="bg-blue-100 text-blue-800">
+                              <StarIcon />
+                              Default
+                            </Badge>
+                          )}
+                          <Badge variant="outline">{method.type.toUpperCase()}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditModal(method)}
+                        title="Edit Payment Method"
+                      >
+                        <EditIcon />
+                      </Button>
+                      {!method.isDefault && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSetDefault(method.id)}
+                          title="Set as Default"
+                        >
+                          <StarIcon />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:text-red-600"
+                        onClick={() => openDeleteModal(method)}
+                        title="Delete Payment Method"
+                      >
+                        <TrashIcon />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditPaymentMethod(method)}>
-                      <FaEdit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => handleDeletePaymentMethod(method.id)}
-                      disabled={paymentMethods.length === 1}
-                    >
-                      <FaTrash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-mono text-lg">{method.cardNumber}</p>
-                    {method.type !== "paypal" && <p>Expires: {method.expiryDate}</p>}
-                    <p>{method.cardholderName}</p>
-                  </div>
-                  {!method.isDefault && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 bg-transparent"
-                      onClick={() => handleSetDefault(method.id)}
-                    >
-                      Set as Default
-                    </Button>
-                  )}
+
+                  <p className="text-sm text-gray-500">Expires: {method.expiryDate}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="text-center py-12">
-              <FaCreditCard className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No payment methods saved</h3>
-              <p className="text-muted-foreground mb-6">Add your first payment method for faster checkout.</p>
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <FaPlus className="h-4 w-4 mr-2" />
-                Add Payment Method
-              </Button>
-            </CardContent>
-          </Card>
         )}
-
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Payment Method</DialogTitle>
-            </DialogHeader>
-            <PaymentMethodForm onSubmit={handleUpdatePaymentMethod} submitText="Update Payment Method" />
-          </DialogContent>
-        </Dialog>
       </div>
-    </DashboardLayout>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCardIcon />
+              {modalMode === "add"
+                ? "Add Payment Method"
+                : modalMode === "edit"
+                  ? "Edit Payment Method"
+                  : "Delete Payment Method"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {modalMode === "delete" ? (
+            <div className="grid gap-4 py-4">
+              <p>Are you sure you want to delete this payment method?</p>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="destructive" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input
+                    type="text"
+                    id="cardNumber"
+                    name="cardNumber"
+                    value={formData.cardNumber}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="expiryDate">Expiry Date</Label>
+                  <Input
+                    type="text"
+                    id="expiryDate"
+                    name="expiryDate"
+                    value={formData.expiryDate}
+                    onChange={handleInputChange}
+                    placeholder="MM/YY"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cvv">CVV</Label>
+                  <Input type="text" id="cvv" name="cvv" value={formData.cvv} onChange={handleInputChange} />
+                </div>
+                <div>
+                  <Label htmlFor="cardholderName">Cardholder Name</Label>
+                  <Input
+                    type="text"
+                    id="cardholderName"
+                    name="cardholderName"
+                    value={formData.cardholderName}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="billingAddress">Billing Address</Label>
+                  <Input
+                    type="text"
+                    id="billingAddress"
+                    name="billingAddress"
+                    value={formData.billingAddress}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input type="text" id="city" name="city" value={formData.city} onChange={handleInputChange} />
+                </div>
+                <div>
+                  <Label htmlFor="zipCode">Zip Code</Label>
+                  <Input
+                    type="text"
+                    id="zipCode"
+                    name="zipCode"
+                    value={formData.zipCode}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <LockIcon />
+                Your payment information is secure and encrypted
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleSubmit}>
+                  {modalMode === "add" ? "Add Payment Method" : "Save Changes"}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
+
+export default PaymentMethodsPage
