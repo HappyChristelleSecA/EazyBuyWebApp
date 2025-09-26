@@ -20,6 +20,12 @@ export interface EmailTemplate {
 const getEmailConfig = (): EmailConfig => {
   // Check for environment variables for real email service
   if (typeof window === "undefined") {
+    console.log("[v0] Checking environment variables for email service:")
+    console.log("[v0] RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY)
+    console.log("[v0] FROM_EMAIL:", process.env.FROM_EMAIL)
+    console.log("[v0] FROM_NAME:", process.env.FROM_NAME)
+    console.log("[v0] NEXT_PUBLIC_APP_URL:", process.env.NEXT_PUBLIC_APP_URL)
+
     // Server-side: check for real email service configuration
     const resendApiKey = process.env.RESEND_API_KEY
     const sendgridApiKey = process.env.SENDGRID_API_KEY
@@ -28,6 +34,7 @@ const getEmailConfig = (): EmailConfig => {
     const smtpPass = process.env.SMTP_PASS
 
     if (resendApiKey) {
+      console.log("[v0] Using Resend email service")
       return {
         provider: "resend",
         apiKey: resendApiKey,
@@ -58,6 +65,7 @@ const getEmailConfig = (): EmailConfig => {
     }
   }
 
+  console.log("[v0] Falling back to demo mode - no email service configured")
   // Fallback to demo mode
   return {
     provider: "demo",
