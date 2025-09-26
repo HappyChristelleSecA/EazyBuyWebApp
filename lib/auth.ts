@@ -94,8 +94,6 @@ export const authenticateUser = async (email: string, password: string): Promise
   return null
 }
 
-import { sendVerificationEmail, sendPasswordResetEmail } from "./email-service"
-
 export const registerUser = async (email: string, password: string, name: string): Promise<User | null> => {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -129,7 +127,21 @@ export const registerUser = async (email: string, password: string, name: string
       console.log("[v0] User registered with verification token:", email)
 
       try {
-        const emailResult = await sendVerificationEmail(email, name, verificationToken)
+        const response = await fetch("/api/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "verification",
+            email: email,
+            userName: name,
+            token: verificationToken,
+          }),
+        })
+
+        const emailResult = await response.json()
+
         if (emailResult.success) {
           console.log(`[v0] Verification email sent successfully to: ${email}`)
         } else {
@@ -188,18 +200,28 @@ export const resetPassword = async (email: string): Promise<{ success: boolean; 
   const resetToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
 
   try {
-    const emailResult = await sendPasswordResetEmail(email, user.name, resetToken)
-    if (emailResult.success) {
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "password-reset",
+        email: email,
+        userName: user.name,
+        token: resetToken,
+      }),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
       console.log(`[v0] Password reset email sent successfully to: ${email}`)
-
-      // In production, you would store the reset token with expiration in the database
-      // For demo, we'll just log it
       console.log(`[v0] Reset token generated: ${resetToken}`)
-
       return { success: true }
     } else {
-      console.log(`[v0] Failed to send password reset email: ${emailResult.error}`)
-      return { success: false, error: emailResult.error || "Failed to send reset email" }
+      console.log(`[v0] Failed to send password reset email: ${result.error}`)
+      return { success: false, error: result.error || "Failed to send reset email" }
     }
   } catch (error) {
     console.log(`[v0] Password reset email error: ${error}`)

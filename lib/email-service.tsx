@@ -201,23 +201,85 @@ export const sendEmail = async (
       }
     }
 
-    // Real email sending would go here
     if (emailConfig.provider === "resend") {
-      // Example Resend implementation (requires Resend package)
-      console.log("[v0] Would send email via Resend API")
-      return { success: false, error: "Resend integration not implemented yet" }
+      console.log("[v0] Sending email via Resend API to:", to)
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${emailConfig.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
+          to: [to],
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("[v0] Resend API error:", response.status, errorData)
+        return {
+          success: false,
+          error: `Resend API error: ${response.status} ${errorData.message || response.statusText}`,
+        }
+      }
+
+      const result = await response.json()
+      console.log("[v0] Email sent successfully via Resend:", result.id)
+
+      return {
+        success: true,
+        messageId: result.id,
+      }
     }
 
     if (emailConfig.provider === "sendgrid") {
-      // Example SendGrid implementation (requires SendGrid package)
-      console.log("[v0] Would send email via SendGrid API")
-      return { success: false, error: "SendGrid integration not implemented yet" }
+      console.log("[v0] Sending email via SendGrid API to:", to)
+
+      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${emailConfig.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: to }] }],
+          from: { email: emailConfig.fromEmail, name: emailConfig.fromName },
+          subject: template.subject,
+          content: [
+            { type: "text/plain", value: template.text },
+            { type: "text/html", value: template.html },
+          ],
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("[v0] SendGrid API error:", response.status, errorData)
+        return {
+          success: false,
+          error: `SendGrid API error: ${response.status} ${errorData.message || response.statusText}`,
+        }
+      }
+
+      // SendGrid returns 202 with no body on success
+      const messageId = response.headers.get("x-message-id") || `sendgrid-${Date.now()}`
+      console.log("[v0] Email sent successfully via SendGrid")
+
+      return {
+        success: true,
+        messageId,
+      }
     }
 
     if (emailConfig.provider === "nodemailer") {
-      // Example Nodemailer implementation (requires Nodemailer package)
-      console.log("[v0] Would send email via SMTP")
-      return { success: false, error: "Nodemailer integration not implemented yet" }
+      // SMTP implementation would require nodemailer package
+      console.log("[v0] SMTP email sending requires nodemailer package")
+      return { success: false, error: "SMTP integration requires additional setup" }
     }
 
     return { success: false, error: "Unknown email provider" }

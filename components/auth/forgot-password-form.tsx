@@ -57,13 +57,6 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
             <Button onClick={onBackToLogin} variant="outline" className="w-full bg-transparent">
               Back to Sign In
             </Button>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
-              <p className="font-medium mb-1 text-blue-800">Current Status: Demo Mode</p>
-              <p className="text-blue-700">
-                Password reset emails are currently simulated. To receive real emails, configure an email service in
-                your environment variables.
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -101,13 +94,6 @@ export function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
             <ArrowLeft className="h-4 w-4" />
             Back to Sign In
           </Button>
-        </div>
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
-          <p className="font-medium mb-1 text-blue-800">Demo Mode Active</p>
-          <p className="text-blue-700">
-            Currently in demo mode - emails are simulated. Configure RESEND_API_KEY, SENDGRID_API_KEY, or SMTP settings
-            in environment variables to send real emails.
-          </p>
         </div>
       </CardContent>
     </Card>
