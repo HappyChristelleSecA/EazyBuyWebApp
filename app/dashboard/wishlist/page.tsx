@@ -41,7 +41,6 @@ export default function WishlistPage() {
 
   const handleAddToCart = (product: any) => {
     addToCart(product)
-    removeFromWishlist(product.id)
   }
 
   return (

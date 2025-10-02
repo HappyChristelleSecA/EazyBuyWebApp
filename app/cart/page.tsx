@@ -88,6 +88,10 @@ export default function CartPage() {
     setAppliedDiscountCodes([]) // Clear discounts after successful payment
   }
 
+  const handleShippingMethodChange = (methodId: string) => {
+    setSelectedShippingMethod(methodId)
+  }
+
   const dismissStockAlert = () => {
     setStockValidationResult(null)
   }
@@ -327,6 +331,7 @@ export default function CartPage() {
         orderTotal={cartCalculation.finalTotal}
         appliedDiscounts={cartCalculation.discounts}
         selectedShippingMethodId={selectedShippingMethod}
+        onShippingMethodChange={handleShippingMethodChange}
       />
     </div>
   )

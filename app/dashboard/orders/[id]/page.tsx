@@ -143,11 +143,287 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
     if (success) {
       console.log("[v0] Return requested successfully, refreshing data")
+
+      if (user?.email) {
+        console.log("[v0] Sending return request email to:", user.email)
+
+        const baseUrl =
+          typeof window !== "undefined"
+            ? window.location.origin
+            : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+        try {
+          const emailResponse = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "return-request",
+              email: user.email,
+              returnDetails: {
+                orderId: order.id,
+                userName: user.name || "Customer",
+                reason: returnReason,
+                items: order.items.map((item) => ({
+                  name: item.product.name,
+                  quantity: item.quantity,
+                })),
+                returnUrl: `${baseUrl}/dashboard/orders/${order.id}`,
+              },
+            }),
+          })
+
+          const emailResult = await emailResponse.json()
+          if (emailResult.success) {
+            console.log("[v0] Return request email sent successfully")
+          } else {
+            console.error("[v0] Failed to send return request email:", emailResult.error)
+          }
+        } catch (emailError) {
+          console.error("[v0] Error sending return request email:", emailError)
+        }
+      }
+
       setReturnDialogOpen(false)
       setReturnReason("")
       router.refresh()
     }
     setIsProcessing(false)
+  }
+
+  const handleDownloadInvoice = () => {
+    if (!order) return
+
+    // Create invoice HTML content
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Invoice #${order.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .company-name { font-size: 28px; font-weight: bold; color: #0ea5e9; }
+            .invoice-title { font-size: 24px; margin-top: 10px; }
+            .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
+            .info-block { flex: 1; }
+            .info-block h3 { margin-bottom: 10px; color: #333; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .items-table th { background-color: #f3f4f6; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #ddd; }
+            .summary { margin-left: auto; width: 300px; }
+            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; }
+            .summary-total { font-weight: bold; font-size: 18px; border-top: 2px solid #333; padding-top: 12px; margin-top: 12px; }
+            .footer { text-align: center; margin-top: 50px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">EazyBuy</div>
+            <div class="invoice-title">INVOICE</div>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-block">
+              <h3>Invoice Details</h3>
+              <p><strong>Invoice #:</strong> ${order.id}</p>
+              <p><strong>Order Date:</strong> ${order.orderDate.toLocaleDateString()}</p>
+              <p><strong>Status:</strong> ${getOrderStatusText(order.status)}</p>
+            </div>
+            
+            <div class="info-block">
+              <h3>Shipping Address</h3>
+              <p><strong>${order.shippingAddress.name}</strong></p>
+              <p>${order.shippingAddress.street}</p>
+              <p>${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}</p>
+              <p>${order.shippingAddress.country}</p>
+            </div>
+          </div>
+          
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items
+                .map(
+                  (item) => `
+                <tr>
+                  <td>${item.product.name}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.price.toFixed(2)}</td>
+                  <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>$${order.subtotal.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping:</span>
+              <span>${order.shipping === 0 ? "FREE" : `$${order.shipping.toFixed(2)}`}</span>
+            </div>
+            <div class="summary-row">
+              <span>Tax:</span>
+              <span>$${order.tax.toFixed(2)}</span>
+            </div>
+            <div class="summary-row summary-total">
+              <span>Total:</span>
+              <span>$${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>For questions about this invoice, please contact support@eazybuy.com</p>
+          </div>
+        </body>
+      </html>
+    `
+
+    // Create a blob and download it
+    const blob = new Blob([invoiceHTML], { type: "text/html" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `invoice-${order.id}.html`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePrintOrder = () => {
+    if (!order) return
+
+    // Create a print-friendly version of the order
+    const printWindow = window.open("", "_blank")
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Order #${order.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .company-name { font-size: 28px; font-weight: bold; color: #0ea5e9; }
+            .order-title { font-size: 24px; margin-top: 10px; }
+            .info-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
+            .info-block { flex: 1; }
+            .info-block h3 { margin-bottom: 10px; color: #333; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .items-table th { background-color: #f3f4f6; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #ddd; }
+            .summary { margin-left: auto; width: 300px; }
+            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; }
+            .summary-total { font-weight: bold; font-size: 18px; border-top: 2px solid #333; padding-top: 12px; margin-top: 12px; }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">EazyBuy</div>
+            <div class="order-title">ORDER DETAILS</div>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-block">
+              <h3>Order Information</h3>
+              <p><strong>Order #:</strong> ${order.id}</p>
+              <p><strong>Order Date:</strong> ${order.orderDate.toLocaleDateString()} at ${order.orderDate.toLocaleTimeString()}</p>
+              <p><strong>Status:</strong> ${getOrderStatusText(order.status)}</p>
+              ${
+                order.estimatedDelivery
+                  ? `<p><strong>Estimated Delivery:</strong> ${order.estimatedDelivery.toLocaleDateString()}</p>`
+                  : ""
+              }
+            </div>
+            
+            <div class="info-block">
+              <h3>Shipping Address</h3>
+              <p><strong>${order.shippingAddress.name}</strong></p>
+              <p>${order.shippingAddress.street}</p>
+              <p>${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}</p>
+              <p>${order.shippingAddress.country}</p>
+            </div>
+          </div>
+          
+          <h3>Order Items</h3>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items
+                .map(
+                  (item) => `
+                <tr>
+                  <td><strong>${item.product.name}</strong></td>
+                  <td>${item.product.description}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.price.toFixed(2)}</td>
+                  <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>$${order.subtotal.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping:</span>
+              <span>${order.shipping === 0 ? "FREE" : `$${order.shipping.toFixed(2)}`}</span>
+            </div>
+            <div class="summary-row">
+              <span>Tax:</span>
+              <span>$${order.tax.toFixed(2)}</span>
+            </div>
+            <div class="summary-row summary-total">
+              <span>Total Amount:</span>
+              <span>$${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `)
+
+    printWindow.document.close()
   }
 
   return (
@@ -289,11 +565,15 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         {/* Action Buttons */}
         <Card>
           <CardContent className="flex gap-4 p-6">
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 bg-transparent"
+              onClick={handleDownloadInvoice}
+            >
               <FaDownload className="h-4 w-4" />
               Download Invoice
             </Button>
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+            <Button variant="outline" className="flex items-center gap-2 bg-transparent" onClick={handlePrintOrder}>
               <FaPrint className="h-4 w-4" />
               Print Order
             </Button>

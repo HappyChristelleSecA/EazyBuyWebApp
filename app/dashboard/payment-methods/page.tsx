@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -92,6 +92,8 @@ interface PaymentMethod {
   isDefault: boolean
 }
 
+const STORAGE_KEY = "eazybuy_payment_methods_alt"
+
 const initialPaymentMethods: PaymentMethod[] = [
   {
     id: "1",
@@ -122,7 +124,19 @@ const initialPaymentMethods: PaymentMethod[] = [
 ]
 
 const PaymentMethodsPage = () => {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods)
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          return JSON.parse(stored)
+        } catch (e) {
+          console.error("[v0] Failed to parse stored payment methods:", e)
+        }
+      }
+    }
+    return initialPaymentMethods
+  })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "delete">("add")
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null)
@@ -135,6 +149,13 @@ const PaymentMethodsPage = () => {
     city: "",
     zipCode: "",
   })
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paymentMethods))
+      console.log("[v0] Payment methods saved to localStorage:", paymentMethods.length)
+    }
+  }, [paymentMethods])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
